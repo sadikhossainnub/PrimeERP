@@ -54,14 +54,16 @@ const SalesOrderStack = () => (
   </Stack.Navigator>
 );
 
-const MoreStack = () => (
+const MoreStack = ({ onLogout }: { onLogout: () => void }) => (
   <Stack.Navigator>
-    <Stack.Screen name="MoreMain" component={MoreTabScreen} options={{ title: 'More' }} />
+    <Stack.Screen name="MoreMain" options={{ title: 'More' }}>
+      {(props) => <MoreTabScreen {...props} onLogout={onLogout} />}
+    </Stack.Screen>
     <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
   </Stack.Navigator>
 );
 
-function MoreTabScreen({ navigation }: any) {
+function MoreTabScreen({ navigation, onLogout }: any) {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -73,13 +75,13 @@ function MoreTabScreen({ navigation }: any) {
       const userData = await ApiService.getCurrentUser();
       setUser(userData);
     } catch (error) {
-      setUser({ name: 'Demo User', email: 'demo@example.com' });
+      setUser(null);
     }
   };
 
   const handleLogout = async () => {
     await ApiService.logout();
-    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+    onLogout();
   };
 
   return (
@@ -87,7 +89,7 @@ function MoreTabScreen({ navigation }: any) {
   );
 }
 
-const MainTabs = () => (
+const MainTabs = ({ onLogout }: { onLogout: () => void }) => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
       tabBarIcon: ({ focused, color, size }) => {
@@ -150,13 +152,17 @@ const MainTabs = () => (
     <Tab.Screen name="Orders" component={SalesOrderStack} options={{ headerShown: false }} />
     <Tab.Screen name="Quotes" component={QuotationStack} options={{ headerShown: false }} />
     <Tab.Screen name="Customers" component={CustomerStack} options={{ headerShown: false }} />
-    <Tab.Screen name="More" component={MoreStack} options={{ headerShown: false }} />
+    <Tab.Screen name="More" options={{ headerShown: false }}>
+      {() => <MoreStack onLogout={onLogout} />}
+    </Tab.Screen>
   </Tab.Navigator>
 );
 
-const AppStack = () => (
+const AppStack = ({ onLogout }: { onLogout: () => void }) => (
     <Stack.Navigator>
-      <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="Main" options={{ headerShown: false }}>
+        {() => <MainTabs onLogout={onLogout} />}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 
@@ -165,6 +171,10 @@ export default function AppNavigator() {
 
   const handleLogin = () => {
     setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
   };
 
   useEffect(() => {
@@ -183,7 +193,9 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator>
         {isAuthenticated ? (
-          <Stack.Screen name="App" component={AppStack} options={{ headerShown: false }} />
+          <Stack.Screen name="App" options={{ headerShown: false }}>
+            {() => <AppStack onLogout={handleLogout} />}
+          </Stack.Screen>
         ) : (
           <Stack.Screen name="Login" options={{ headerShown: false }}>
             {() => <LoginScreen onLogin={handleLogin} />}

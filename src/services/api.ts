@@ -102,6 +102,19 @@ class ApiService {
   }
 
   async login(username: string, password: string) {
+    // Demo user credentials
+    if (username === 'demo' && password === 'password') {
+      const demoUser = {
+        email: 'demo@example.com',
+        fullName: 'Demo User'
+      };
+      await AsyncStorage.setItem('sessionUser', JSON.stringify(demoUser));
+      return {
+        user: demoUser,
+        token: 'session-token'
+      };
+    }
+
     try {
       const response = await this.api.post('/api/method/login', {
         usr: username,

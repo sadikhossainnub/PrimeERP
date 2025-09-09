@@ -17,7 +17,7 @@ export default function ProfileScreen({ navigation }: any) {
       setUser(userData);
     } catch (error) {
       console.error('Failed to load user data:', error);
-      setUser({ full_name: 'Demo User', email: 'demo@example.com' });
+      setUser(null);
     } finally {
       setLoading(false);
     }

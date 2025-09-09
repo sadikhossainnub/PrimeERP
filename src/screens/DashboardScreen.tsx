@@ -10,7 +10,7 @@ export default function DashboardScreen({ navigation }: any) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error' | 'demo'>('connecting');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [error, setError] = useState<string>('');
   const [userName, setUserName] = useState('');
 
@@ -29,16 +29,9 @@ export default function DashboardScreen({ navigation }: any) {
       setConnectionStatus('connected');
     } catch (error: any) {
       console.error('Failed to load dashboard data:', error.message);
-      setConnectionStatus('demo');
+      setConnectionStatus('error');
       setError('Failed to load dashboard data');
-      
-      setData({
-        todaysSales: 1250.50,
-        orderCount: 8,
-        pendingDeliveries: 3,
-        pendingLeaves: 2,
-        expensesToday: 450.00
-      });
+      setData(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -66,7 +59,6 @@ export default function DashboardScreen({ navigation }: any) {
       case 'connected': return '#4CAF50';
       case 'connecting': return '#FF9800';
       case 'error': return '#F44336';
-      case 'demo': return '#2196F3';
       default: return '#666';
     }
   };
@@ -76,7 +68,6 @@ export default function DashboardScreen({ navigation }: any) {
       case 'connected': return 'Connected to ERPNext';
       case 'connecting': return 'Connecting...';
       case 'error': return 'Connection Failed';
-      case 'demo': return 'Demo Mode - Configure in Settings';
       default: return 'Unknown Status';
     }
   };

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/api';
@@ -80,30 +81,6 @@ export default function LoginScreen({ onLogin }: LoginProps) {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setFormData({
-      email: 'Administrator',
-      password: 'admin',
-      rememberMe: true
-    });
-
-    setIsLoading(true);
-    setApiError('');
-
-    try {
-      const { user } = await ApiService.login('Administrator', 'admin');
-      onLogin({
-        email: user.email,
-        name: user.fullName,
-        token: 'session-token'
-      });
-    } catch (error) {
-      console.error('Demo login failed:', error);
-      setApiError('Could not log in with demo credentials.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <KeyboardAvoidingView 
@@ -113,17 +90,13 @@ export default function LoginScreen({ onLogin }: LoginProps) {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Ionicons name="business" size={40} color="white" />
+            <Image source={require('../../assets/icon.png')} style={styles.logo} />
           </View>
-          <Text style={styles.appTitle}>ERPNext Mobile</Text>
+          <Text style={styles.appTitle}>Prime ERP Mobile</Text>
           <Text style={styles.appSubtitle}>Sales Order Management</Text>
         </View>
 
         <View style={styles.formContainer}>
-          <View style={styles.formHeader}>
-            <Text style={styles.formTitle}>Welcome Back</Text>
-            <Text style={styles.formSubtitle}>Sign in to your ERPNext account</Text>
-          </View>
 
           {apiError && (
             <View style={styles.errorAlert}>
@@ -214,19 +187,6 @@ export default function LoginScreen({ onLogin }: LoginProps) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.demoContainer}>
-          <Ionicons name="phone-portrait" size={32} color="#666" />
-          <Text style={styles.demoTitle}>Try Demo Account</Text>
-          <Text style={styles.demoSubtitle}>Experience the app with sample data</Text>
-          <TouchableOpacity
-            style={styles.demoButton}
-            onPress={handleDemoLogin}
-            disabled={isLoading}
-          >
-            <Text style={styles.demoButtonText}>Load Demo Credentials</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.featuresContainer}>
           <Text style={styles.featuresTitle}>What's included:</Text>
           <View style={styles.featuresList}>
@@ -250,7 +210,7 @@ export default function LoginScreen({ onLogin }: LoginProps) {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Powered by ERPNext Framework</Text>
+          <Text style={styles.footerText}>Powered by Prime Technology of Bangladesh</Text>
           <View style={styles.footerLinks}>
             <TouchableOpacity><Text style={styles.footerLink}>Privacy</Text></TouchableOpacity>
             <TouchableOpacity><Text style={styles.footerLink}>Terms</Text></TouchableOpacity>
@@ -273,17 +233,22 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: 48,
-    paddingBottom: 32,
+    paddingTop: 64,
+    paddingBottom: 40,
   },
   logoContainer: {
     width: 80,
     height: 80,
     backgroundColor: '#2196F3',
-    borderRadius: 16,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
   },
   appTitle: {
     fontSize: 24,
@@ -299,7 +264,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 24,
-    marginBottom: 24,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -431,42 +396,6 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     borderTopColor: 'transparent',
     borderRadius: 8,
-  },
-  demoContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderStyle: 'dashed',
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  demoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  demoSubtitle: {
-    fontSize: 12,
-    color: '#600',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  demoButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  demoButtonText: {
-    color: '#2196F3',
-    fontSize: 12,
-    fontWeight: '500',
   },
   featuresContainer: {
     backgroundColor: 'white',
