@@ -113,7 +113,8 @@ class ApiService implements IApiService {
       return {
         email: userData.email || username,
         name: userData.full_name || userData.first_name || username,
-        username: username
+        username: username,
+        user_image: userData.user_image ? `${this.baseURL}${userData.user_image}` : null
       };
     } catch (error: any) {
       console.error('Failed to fetch user data:', error);
@@ -200,7 +201,20 @@ class ApiService implements IApiService {
   }
 
   async getCustomers(limit = 20, offset = 0, search = '') {
-    const params: any = { limit_page_length: limit, limit_start: offset };
+    const params: any = {
+      limit_page_length: limit,
+      limit_start: offset,
+      fields: JSON.stringify([
+        "name",
+        "customer_name",
+        "email_id",
+        "mobile_no",
+        "customer_primary_address",
+        "disabled",
+        "creation",
+        "image"
+      ])
+    };
     if (search) {
       params.filters = JSON.stringify([['customer_name', 'like', `%${search}%`]]);
     }

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -17,7 +18,7 @@ interface MoreScreenProps {
 }
 
 export function MoreScreen({ onLogout, navigation }: MoreScreenProps) {
-  const [user, setUser] = React.useState<{ email: string; name: string; token: string } | null>(null);
+  const [user, setUser] = React.useState<{ email: string; name: string; username: string; user_image?: string } | null>(null);
   const [loading, setLoading] = React.useState(true);
 
   const fetchUser = async () => {
@@ -141,7 +142,11 @@ export function MoreScreen({ onLogout, navigation }: MoreScreenProps) {
       <View style={styles.profileSection}>
         <View style={styles.profileInfo}>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={32} color="#ffffff" />
+            {user?.user_image ? (
+              <Image source={{ uri: user.user_image }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name="person" size={32} color="#ffffff" />
+            )}
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{loading ? 'Loading...' : user?.name || 'User'}</Text>
@@ -229,6 +234,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
   },
   userInfo: {
     flex: 1,

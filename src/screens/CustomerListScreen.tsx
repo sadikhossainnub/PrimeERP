@@ -141,7 +141,7 @@ export default function CustomerListScreen({ navigation }: any) {
         totalOrders: 0,
         totalSpent: 0,
         lastOrderDate: customer.creation || new Date().toISOString(),
-        image: customer.image
+        image: customer.image ? `https://paperware.jfmart.site${customer.image}` : null
       })) || [];
       setCustomers(serverCustomers);
     } catch (error) {
@@ -198,7 +198,7 @@ export default function CustomerListScreen({ navigation }: any) {
           <View style={styles.avatar}>
             {item.image ? (
               <Image 
-                source={{ uri: `https://paperware.jfmart.site${item.image}` }} 
+                source={{ uri: item.image }} 
                 style={styles.avatarImage}
                 defaultSource={require('../../assets/icon.png')}
               />
