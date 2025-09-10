@@ -7,21 +7,27 @@ import {
   StyleSheet, 
   TextInput, 
   RefreshControl,
-  ScrollView
+  ScrollView,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Item {
-  name: string;
+  id: string;
+  item_code: string;
+  item_name: string;
   description: string;
-  category: string;
-  price: number;
-  cost: number;
-  stock: number;
-  lowStockThreshold: number;
-  status: 'active' | 'inactive' | 'discontinued';
+  item_group: string;
+  standard_rate: number;
+  valuation_rate: number;
+  stock_qty: number;
+  stock_uom: string;
+  status: 'active' | 'inactive';
+  image?: string;
+  creation: string;
+  is_stock_item: boolean;
 }
 
 const mockItems: Item[] = [
@@ -90,14 +96,19 @@ export default function ItemListScreen({ navigation }: any) {
       setLoading(true);
       const response = await ApiService.getItems(50, 0, searchQuery);
       const serverItems = response.data?.map((item: any) => ({
-        name: item.item_name || item.name,
+        id: item.name,
+        item_code: item.item_code || item.name,
+        item_name: item.item_name || item.name,
         description: item.description || 'No description',
-        category: item.item_group || 'General',
-        price: item.standard_rate || 0,
-        cost: item.valuation_rate || 0,
-        stock: item.stock_qty || 0,
-        lowStockThreshold: 10,
-        status: item.disabled ? 'inactive' : 'active'
+        item_group: item.item_group || 'General',
+        standard_rate: item.standard_rate || 0,
+        valuation_rate: item.valuation_rate || 0,
+        stock_qty: item.stock_qty || 0,
+        stock_uom: item.stock_uom || 'Nos',
+        status: item.disabled ? 'inactive' : 'active',
+        image: item.image ? `https://paperware.jfmart.site${item.image}` : null,
+        creation: item.creation || new Date().toISOString(),
+        is_stock_item: item.is_stock_item || false
       })) || [];
       setItems(serverItems);
     } catch (error) {
@@ -149,9 +160,12 @@ export default function ItemListScreen({ navigation }: any) {
   };
 
   const getStockStatus = (item: Item) => {
-    if (item.stock <= 0) {
+    if (!item.is_stock_item) {
+      return { label: 'Service', color: '#2196F3' };
+    }
+    if (item.stock_qty <= 0) {
       return { label: 'Out of Stock', color: '#F44336' };
-    } else if (item.stock <= item.lowStockThreshold) {
+    } else if (item.stock_qty <= 10) {
       return { label: 'Low Stock', color: '#FF9800' };
     } else {
       return { label: 'In Stock', color: '#4CAF50' };
@@ -159,7 +173,12 @@ export default function ItemListScreen({ navigation }: any) {
   };
 
   const calculateMargin = (price: number, cost: number) => {
+    if (price === 0) return '0';
     return ((price - cost) / price * 100).toFixed(1);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const renderItem = ({ item }: { item: Item }) => {
@@ -171,20 +190,35 @@ export default function ItemListScreen({ navigation }: any) {
         onPress={() => navigation.navigate('ItemForm', { item })}
       >
         <View style={styles.itemHeader}>
-          <View style={styles.itemIcon}>
-            <Ionicons name="cube" size={24} color="#666" />
+          <View style={styles.itemIconContainer}>
+            {item.image ? (
+              <Image 
+                source={{ uri: item.image }} 
+                style={styles.itemImage}
+                defaultSource={require('../../assets/icon.png')}
+              />
+            ) : (
+              <View style={styles.itemIcon}>
+                <Text style={styles.itemIconText}>{getInitials(item.item_name)}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.itemInfo}>
             <View style={styles.itemTitleRow}>
-              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemCode}>{item.item_code}</Text>
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
                 <Text style={styles.statusText}>{item.status}</Text>
               </View>
             </View>
-            <Text style={styles.itemDescription}>{item.description}</Text>
+            <Text style={styles.itemName}>{item.item_name}</Text>
+            <Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
             <View style={styles.badgeRow}>
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.category}</Text>
+                <Ionicons name="folder-outline" size={12} color="#666" />
+                <Text style={styles.badgeText}>{item.item_group}</Text>
+              </View>
+              <View style={[styles.stockBadge, { backgroundColor: `${stockStatus.color}20` }]}>
+                <Text style={[styles.stockBadgeText, { color: stockStatus.color }]}>{stockStatus.label}</Text>
               </View>
             </View>
           </View>
@@ -192,26 +226,42 @@ export default function ItemListScreen({ navigation }: any) {
 
         <View style={styles.priceRow}>
           <View style={styles.priceItem}>
-            <Text style={styles.priceLabel}>Price</Text>
-            <Text style={styles.priceValue}>{formatCurrency(item.price)}</Text>
+            <Text style={styles.priceLabel}>Standard Rate</Text>
+            <Text style={styles.priceValue}>{formatCurrency(item.standard_rate)}</Text>
           </View>
           <View style={styles.priceItem}>
-            <Text style={styles.priceLabel}>Cost</Text>
-            <Text style={styles.priceValue}>{formatCurrency(item.cost)}</Text>
+            <Text style={styles.priceLabel}>Valuation Rate</Text>
+            <Text style={styles.priceValue}>{formatCurrency(item.valuation_rate)}</Text>
           </View>
         </View>
 
         <View style={styles.statsRow}>
+          {item.is_stock_item && (
+            <View style={styles.statItem}>
+              <Ionicons name="cube-outline" size={14} color="#666" />
+              <View style={styles.statText}>
+                <Text style={styles.statLabel}>Stock</Text>
+                <Text style={styles.statValue}>{item.stock_qty} {item.stock_uom}</Text>
+              </View>
+            </View>
+          )}
           <View style={styles.statItem}>
-            <Ionicons name="cube-outline" size={14} color="#666" />
-            <Text style={styles.statLabel}>Stock</Text>
-            <Text style={[styles.statValue, { color: stockStatus.color }]}>{item.stock}</Text>
+            <Ionicons name="trending-up-outline" size={14} color="#666" />
+            <View style={styles.statText}>
+              <Text style={styles.statLabel}>Margin</Text>
+              <Text style={styles.statValue}>{calculateMargin(item.standard_rate, item.valuation_rate)}%</Text>
+            </View>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>Margin</Text>
-            <Text style={styles.statValue}>{calculateMargin(item.price, item.cost)}%</Text>
+            <Ionicons name="calendar-outline" size={14} color="#666" />
+            <View style={styles.statText}>
+              <Text style={styles.statLabel}>Created</Text>
+              <Text style={styles.statValue}>{formatDate(item.creation)}</Text>
+            </View>
           </View>
         </View>
+        
+        <Ionicons name="chevron-forward" size={20} color="#666" style={styles.chevron} />
       </TouchableOpacity>
     );
   };
@@ -242,29 +292,8 @@ export default function ItemListScreen({ navigation }: any) {
           />
         </View>
 
-        {/* Category Filter */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {categories.map(category => (
-            <TouchableOpacity
-              key={category}
-              style={[
-                styles.filterButton,
-                selectedCategory === category && styles.filterButtonActive
-              ]}
-              onPress={() => setSelectedCategory(category)}
-            >
-              <Text style={[
-                styles.filterButtonText,
-                selectedCategory === category && styles.filterButtonTextActive
-              ]}>
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* Status Filter */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+        <View style={styles.filterContainer}>
           {statusOptions.map(option => (
             <TouchableOpacity
               key={option.value}
@@ -282,7 +311,9 @@ export default function ItemListScreen({ navigation }: any) {
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
+
+
       </View>
 
       {/* Item Count */}
@@ -357,7 +388,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  filterScroll: {
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
     marginBottom: 8,
   },
   filterButton: {
@@ -408,14 +441,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 12,
   },
+  itemIconContainer: {
+    width: 56,
+    height: 56,
+    marginRight: 12,
+  },
   itemIcon: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#2196F3',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+  },
+  itemIconText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  itemImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
   },
   itemInfo: {
     flex: 1,
@@ -426,11 +473,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  itemCode: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    flex: 1,
+  },
   itemName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
+    marginBottom: 4,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -444,26 +497,38 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   itemDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#666',
     marginBottom: 8,
+    lineHeight: 18,
   },
   badgeRow: {
     flexDirection: 'row',
     gap: 8,
+    alignItems: 'center',
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
     gap: 4,
   },
-  badgeText: {
+  stockBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  stockBadgeText: {
     fontSize: 10,
+    fontWeight: '600',
+  },
+  badgeText: {
+    fontSize: 11,
     color: '#666',
+    fontWeight: '500',
   },
   priceRow: {
     flexDirection: 'row',
@@ -474,7 +539,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   priceLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#666',
     marginBottom: 2,
   },
@@ -486,20 +551,24 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    gap: 16,
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    flex: 1,
+  },
+  statText: {
+    marginLeft: 6,
   },
   statLabel: {
-    fontSize: 10,
-    color: '#666',
+    fontSize: 11,
+    color: '#999',
+    marginBottom: 2,
   },
   statValue: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '500',
     color: '#333',
   },
   lastSold: {
@@ -518,6 +587,12 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 12,
     color: '#999',
+  },
+  chevron: {
+    position: 'absolute',
+    right: 16,
+    top: '50%',
+    marginTop: -10,
   },
   fab: {
     position: 'absolute',

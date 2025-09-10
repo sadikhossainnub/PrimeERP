@@ -233,6 +233,29 @@ class ApiService implements IApiService {
     return response.data;
   }
 
+  async getCustomerStats(customerName: string) {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Sales Order`, {
+        params: {
+          filters: JSON.stringify([['customer', '=', customerName]]),
+          fields: JSON.stringify(['grand_total', 'transaction_date'])
+        },
+        headers: await this.getAuthHeaders(false)
+      });
+      
+      const orders = response.data.data || [];
+      const totalOrders = orders.length;
+      const totalSpent = orders.reduce((sum: number, order: any) => sum + (order.grand_total || 0), 0);
+      const lastOrderDate = orders.length > 0 ? 
+        orders.sort((a: any, b: any) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())[0].transaction_date :
+        null;
+      
+      return { totalOrders, totalSpent, lastOrderDate };
+    } catch (error) {
+      return { totalOrders: 0, totalSpent: 0, lastOrderDate: null };
+    }
+  }
+
   async createCustomer(customerData: any) {
     const response = await axios.post(`${this.baseURL}api/resource/Customer`, customerData, {
       headers: await this.getAuthHeaders()
