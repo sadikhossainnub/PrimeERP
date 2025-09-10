@@ -109,7 +109,7 @@ export default function LoginScreen({ onLogin }: LoginProps) {
             <View style={styles.inputContainer}>
               <Ionicons name="mail" size={16} color="#666" style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
+                style={[styles.input, !!errors.email && styles.inputError]}
                 placeholder="Enter your username or email"
                 value={formData.email}
                 onChangeText={(text) => handleInputChange('email', text)}
@@ -128,7 +128,7 @@ export default function LoginScreen({ onLogin }: LoginProps) {
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed" size={16} color="#666" style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, errors.password && styles.inputError]}
+                style={[styles.input, !!errors.password && styles.inputError]}
                 placeholder="Enter your password"
                 value={formData.password}
                 onChangeText={(text) => handleInputChange('password', text)}

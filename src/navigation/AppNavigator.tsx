@@ -112,6 +112,9 @@ const MainTabs = ({ onLogout }: { onLogout: () => void }) => (
           case 'Customers':
             iconName = focused ? 'people' : 'people-outline';
             break;
+          case 'Items':
+            iconName = focused ? 'cube' : 'cube-outline';
+            break;
           case 'More':
             iconName = focused ? 'ellipsis-horizontal' : 'ellipsis-horizontal-outline';
                 break;
@@ -153,6 +156,7 @@ const MainTabs = ({ onLogout }: { onLogout: () => void }) => (
     <Tab.Screen name="Orders" component={SalesOrderStack} options={{ headerShown: false }} />
     <Tab.Screen name="Quotes" component={QuotationStack} options={{ headerShown: false }} />
     <Tab.Screen name="Customers" component={CustomerStack} options={{ headerShown: false }} />
+    <Tab.Screen name="Items" component={ItemStack} options={{ headerShown: false }} />
     <Tab.Screen name="More" options={{ headerShown: false }}>
       {() => <MoreStack onLogout={onLogout} />}
     </Tab.Screen>

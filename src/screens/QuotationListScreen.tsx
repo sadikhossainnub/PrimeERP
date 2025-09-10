@@ -7,88 +7,88 @@ import LoadingSpinner from '../components/LoadingSpinner';
 interface Quotation {
   id: string;
   quotationNumber: string;
-  customerName: string;
-  customerEmail: string;
-  quotationDate: string;
-  validUntil: string;
-  totalAmount: number;
+  customer_name: string;
+  email: string;
+  transaction_date: string;
+  valid_till: string;
+  grand_total: number;
   currency: string;
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
-  items: number;
+  total_qty: number;
 }
 
 const mockQuotations: Quotation[] = [
   {
     id: '1',
     quotationNumber: 'QT-2025-001',
-    customerName: 'Acme Corporation',
-    customerEmail: 'orders@acme.com',
-    quotationDate: '2025-01-15',
-    validUntil: '2025-02-15',
-    totalAmount: 18500.00,
+    customer_name: 'Acme Corporation',
+    email: 'orders@acme.com',
+    transaction_date: '2025-01-15',
+    valid_till: '2025-02-15',
+    grand_total: 18500.00,
     currency: 'USD',
     status: 'sent',
-    items: 6
+    total_qty: 6
   },
   {
     id: '2',
     quotationNumber: 'QT-2025-002',
-    customerName: 'Global Tech Solutions',
-    customerEmail: 'procurement@globaltech.com',
-    quotationDate: '2025-01-14',
-    validUntil: '2025-02-14',
-    totalAmount: 12300.75,
+    customer_name: 'Global Tech Solutions',
+    email: 'procurement@globaltech.com',
+    transaction_date: '2025-01-14',
+    valid_till: '2025-02-14',
+    grand_total: 12300.75,
     currency: 'USD',
     status: 'approved',
-    items: 4
+    total_qty: 4
   },
   {
     id: '3',
     quotationNumber: 'QT-2025-003',
-    customerName: 'Digital Dynamics',
-    customerEmail: 'orders@digitaldyn.com',
-    quotationDate: '2025-01-13',
-    validUntil: '2025-02-13',
-    totalAmount: 29750.50,
+    customer_name: 'Digital Dynamics',
+    email: 'orders@digitaldyn.com',
+    transaction_date: '2025-01-13',
+    valid_till: '2025-02-13',
+    grand_total: 29750.50,
     currency: 'USD',
     status: 'draft',
-    items: 10
+    total_qty: 10
   },
   {
     id: '4',
     quotationNumber: 'QT-2025-004',
-    customerName: 'Innovate Systems',
-    customerEmail: 'purchasing@innovatesys.com',
-    quotationDate: '2025-01-12',
-    validUntil: '2025-02-12',
-    totalAmount: 7850.00,
+    customer_name: 'Innovate Systems',
+    email: 'purchasing@innovatesys.com',
+    transaction_date: '2025-01-12',
+    valid_till: '2025-02-12',
+    grand_total: 7850.00,
     currency: 'USD',
     status: 'rejected',
-    items: 3
+    total_qty: 3
   },
   {
     id: '5',
     quotationNumber: 'QT-2025-005',
-    customerName: 'Smart Solutions Ltd',
-    customerEmail: 'orders@smartsolutions.com',
-    quotationDate: '2025-01-10',
-    validUntil: '2025-02-10',
-    totalAmount: 15600.25,
+    customer_name: 'Smart Solutions Ltd',
+    email: 'orders@smartsolutions.com',
+    transaction_date: '2025-01-10',
+    valid_till: '2025-02-10',
+    grand_total: 15600.25,
     currency: 'USD',
     status: 'sent',
-    items: 7
+    total_qty: 7
   },
   {
     id: '6',
     quotationNumber: 'QT-2025-006',
-    customerName: 'Future Enterprises',
-    customerEmail: 'procurement@future.com',
-    quotationDate: '2025-01-05',
-    validUntil: '2025-01-20',
-    totalAmount: 4200.00,
+    customer_name: 'Future Enterprises',
+    email: 'procurement@future.com',
+    transaction_date: '2025-01-05',
+    valid_till: '2025-01-20',
+    grand_total: 4200.00,
     currency: 'USD',
     status: 'expired',
-    items: 2
+    total_qty: 2
   }
 ];
 
@@ -103,8 +103,8 @@ export default function QuotationListScreen({ navigation }: any) {
     return quotations.filter(quotation => {
       const matchesSearch = 
         quotation.quotationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        quotation.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        quotation.customerEmail.toLowerCase().includes(searchQuery.toLowerCase());
+        quotation.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        quotation.email.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = selectedStatus === 'all' || quotation.status === selectedStatus;
       
@@ -119,14 +119,14 @@ export default function QuotationListScreen({ navigation }: any) {
       const serverQuotations = response.data?.map((quotation: any) => ({
         id: quotation.name,
         quotationNumber: quotation.name,
-        customerName: quotation.party_name || quotation.customer_name,
-        customerEmail: quotation.contact_email || 'N/A',
-        quotationDate: quotation.transaction_date || quotation.creation,
-        validUntil: quotation.valid_till || quotation.creation,
-        totalAmount: quotation.grand_total || 0,
+        customer_name: quotation.customer_name,
+        email: quotation.email,
+        transaction_date: quotation.transaction_date,
+        valid_till: quotation.valid_till,
+        grand_total: quotation.grand_total,
         currency: 'BDT',
         status: quotation.status?.toLowerCase() || 'draft',
-        items: quotation.total_qty || 0
+        total_qty: quotation.total_qty
       })) || [];
       setQuotations(serverQuotations);
     } catch (error) {
@@ -210,7 +210,7 @@ export default function QuotationListScreen({ navigation }: any) {
         </View>
       </View>
       
-      <Text style={styles.customerName}>{item.customerName}</Text>
+      <Text style={styles.customerName}>{item.customer_name}</Text>
       
       <View style={styles.quotationDetails}>
         <View style={styles.detailRow}>
@@ -218,7 +218,7 @@ export default function QuotationListScreen({ navigation }: any) {
             <Ionicons name="calendar-outline" size={14} color="#666" />
             <View style={styles.detailText}>
               <Text style={styles.detailLabel}>Quote Date</Text>
-              <Text style={styles.detailValue}>{formatDate(item.quotationDate)}</Text>
+              <Text style={styles.detailValue}>{formatDate(item.transaction_date)}</Text>
             </View>
           </View>
           
@@ -226,27 +226,27 @@ export default function QuotationListScreen({ navigation }: any) {
             <Ionicons name="cash-outline" size={14} color="#666" />
             <View style={styles.detailText}>
               <Text style={styles.detailLabel}>Total</Text>
-              <Text style={styles.detailValue}>{formatCurrency(item.totalAmount, item.currency)}</Text>
+              <Text style={styles.detailValue}>{formatCurrency(item.grand_total, item.currency)}</Text>
             </View>
           </View>
         </View>
         
         <View style={styles.validityRow}>
-          <Ionicons name="time-outline" size={14} color={isExpiringSoon(item.validUntil) ? '#FF9800' : '#666'} />
+          <Ionicons name="time-outline" size={14} color={isExpiringSoon(item.valid_till) ? '#FF9800' : '#666'} />
           <View style={styles.detailText}>
             <Text style={styles.detailLabel}>Valid Until</Text>
-            <Text style={[styles.detailValue, isExpiringSoon(item.validUntil) && styles.expiringText]}>
-              {formatDate(item.validUntil)}
+            <Text style={[styles.detailValue, isExpiringSoon(item.valid_till) && styles.expiringText]}>
+              {formatDate(item.valid_till)}
             </Text>
           </View>
-          {isExpiringSoon(item.validUntil) && (
+          {isExpiringSoon(item.valid_till) && (
             <Text style={styles.expiringBadge}>Expiring Soon</Text>
           )}
         </View>
         
         <View style={styles.itemsRow}>
           <Ionicons name="list-outline" size={14} color="#666" />
-          <Text style={styles.itemsText}>{item.items} item{item.items !== 1 ? 's' : ''}</Text>
+          <Text style={styles.itemsText}>{item.total_qty} item{item.total_qty !== 1 ? 's' : ''}</Text>
         </View>
       </View>
       

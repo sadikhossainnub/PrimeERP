@@ -6,9 +6,6 @@ import ApiService from '../services/api';
 import NotificationService from '../services/notifications';
 
 export default function SettingsScreen() {
-  const [serverUrl, setServerUrl] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [apiSecret, setApiSecret] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
 
@@ -18,17 +15,11 @@ export default function SettingsScreen() {
 
   const loadSettings = async () => {
     try {
-      const [url, key, secret, theme, notif] = await Promise.all([
-        AsyncStorage.getItem('serverUrl'),
-        AsyncStorage.getItem('apiKey'),
-        AsyncStorage.getItem('apiSecret'),
+      const [theme, notif] = await Promise.all([
         AsyncStorage.getItem('darkMode'),
         AsyncStorage.getItem('notifications'),
       ]);
 
-      setServerUrl(url || '');
-      setApiKey(key || '');
-      setApiSecret(secret || '');
       setDarkMode(theme === 'true');
       setNotifications(notif !== 'false');
     } catch (error) {
@@ -36,30 +27,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const saveCredentials = async () => {
-    if (!serverUrl || !apiKey || !apiSecret) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
-
-    try {
-      await ApiService.setCredentials(serverUrl, apiKey, apiSecret);
-      Alert.alert('Success', 'Credentials saved successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save credentials');
-      console.error('Failed to save credentials:', error);
-    }
-  };
-
-  const testConnection = async () => {
-    try {
-      await ApiService.getList('User', undefined, ['name'], 1);
-      Alert.alert('Success', 'Connection test successful');
-    } catch (error) {
-      Alert.alert('Error', 'Connection test failed. Please check your credentials.');
-      console.error('Connection test failed:', error);
-    }
-  };
 
   const toggleDarkMode = async (value: boolean) => {
     setDarkMode(value);
@@ -89,9 +56,6 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             await AsyncStorage.clear();
-            setServerUrl('');
-            setApiKey('');
-            setApiSecret('');
             setDarkMode(false);
             setNotifications(true);
             Alert.alert('Success', 'All data cleared');
@@ -103,43 +67,6 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ERPNext Server Configuration</Text>
-        
-        <TextInput
-          label="Server URL *"
-          value={serverUrl}
-          onChangeText={setServerUrl}
-          placeholder="https://your-erpnext-server.com"
-          style={styles.input}
-        />
-
-        <TextInput
-          label="API Key *"
-          value={apiKey}
-          onChangeText={setApiKey}
-          secureTextEntry
-          style={styles.input}
-        />
-
-        <TextInput
-          label="API Secret *"
-          value={apiSecret}
-          onChangeText={setApiSecret}
-          secureTextEntry
-          style={styles.input}
-        />
-
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.button} onPress={saveCredentials}>
-            <Text style={styles.buttonText}>Save Credentials</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={testConnection}>
-            <Text style={[styles.buttonText, styles.secondaryButtonText]}>Test Connection</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>App Settings</Text>

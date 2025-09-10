@@ -2,6 +2,9 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, API_KEY, API_SECRET } from '../config';
 
+// Set default headers for all axios requests
+axios.defaults.headers.common['Expect'] = '';
+
 interface RecentActivity {
   type: string;
   title: string;
@@ -15,16 +18,37 @@ interface IApiService {
   login(username: string, password: string): Promise<{ success: boolean; user: string }>;
   logout(): Promise<void>;
   getCurrentUser(): Promise<any>;
-  getDashboardData(): Promise<any>;
+  getDashboardData(): Promise<{
+    todaysSales: number;
+    orderCount: number;
+    pendingDeliveries: number;
+    pendingLeaves: number;
+    expensesToday: number;
+    recentActivities: RecentActivity[];
+  }>;
   getCustomers(limit?: number, offset?: number, search?: string): Promise<any>;
   getCustomer(name: string): Promise<any>;
   createCustomer(customerData: any): Promise<any>;
   updateCustomer(name: string, customerData: any): Promise<any>;
   getSalesOrders(limit?: number, offset?: number, search?: string): Promise<any>;
+  getQuotations(limit?: number, offset?: number, search?: string): Promise<any>;
+  getItems(limit?: number, offset?: number, search?: string): Promise<any>;
 }
 
 class ApiService implements IApiService {
   private baseURL: string = API_URL;
+
+  private async getAuthHeaders(includeContentType = true) {
+    const sid = await AsyncStorage.getItem('sid');
+    const headers: any = {
+      'Cookie': sid,
+      'Authorization': `token ${API_KEY}:${API_SECRET}`,
+    };
+    if (includeContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+  }
 
   async login(username: string, password: string) {
     try {
@@ -55,10 +79,7 @@ class ApiService implements IApiService {
     try {
       console.log('Attempting logout...');
       await axios.post(`${this.baseURL}api/method/logout`, {}, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: await this.getAuthHeaders(),
       });
       await AsyncStorage.removeItem('sid');
       console.log('Logout successful');
@@ -69,17 +90,15 @@ class ApiService implements IApiService {
   }
 
   async getCurrentUser() {
-    const sid = await AsyncStorage.getItem('sid');
     const response = await axios.get(`${this.baseURL}api/method/frappe.auth.get_logged_user`, {
-      headers: { Cookie: sid }
+      headers: await this.getAuthHeaders(false)
     });
     return response.data.message;
   }
 
   async getDashboardData() {
     try {
-      const sid = await AsyncStorage.getItem('sid');
-      const headers = { Cookie: sid };
+      const headers = await this.getAuthHeaders(false);
       
       const [salesOrders, quotations, customers] = await Promise.all([
         axios.get(`${this.baseURL}api/resource/Sales Order`, {
@@ -96,10 +115,10 @@ class ApiService implements IApiService {
         })
       ]);
 
-      const totalSales = salesOrders.data.data?.reduce((sum: number, order: any) => 
+      const totalSales = salesOrders.data.data?.reduce((sum: number, order: any) =>
         sum + (order.grand_total || 0), 0) || 0;
       
-      const pendingOrders = salesOrders.data.data?.filter((order: any) => 
+      const pendingOrders = salesOrders.data.data?.filter((order: any) =>
         order.status === 'Draft' || order.status === 'To Deliver').length || 0;
 
       return {
@@ -145,7 +164,6 @@ class ApiService implements IApiService {
   }
 
   async getCustomers(limit = 20, offset = 0, search = '') {
-    const sid = await AsyncStorage.getItem('sid');
     const params: any = { limit_page_length: limit, limit_start: offset };
     if (search) {
       params.filters = JSON.stringify([['customer_name', 'like', `%${search}%`]]);
@@ -153,37 +171,33 @@ class ApiService implements IApiService {
     
     const response = await axios.get(`${this.baseURL}api/resource/Customer`, {
       params,
-      headers: { Cookie: sid }
+      headers: await this.getAuthHeaders(false)
     });
     return response.data;
   }
 
   async getCustomer(name: string) {
-    const sid = await AsyncStorage.getItem('sid');
     const response = await axios.get(`${this.baseURL}api/resource/Customer/${name}`, {
-      headers: { Cookie: sid }
+      headers: await this.getAuthHeaders(false)
     });
     return response.data;
   }
 
   async createCustomer(customerData: any) {
-    const sid = await AsyncStorage.getItem('sid');
     const response = await axios.post(`${this.baseURL}api/resource/Customer`, customerData, {
-      headers: { Cookie: sid, 'Content-Type': 'application/json' }
+      headers: await this.getAuthHeaders()
     });
     return response.data;
   }
 
   async updateCustomer(name: string, customerData: any) {
-    const sid = await AsyncStorage.getItem('sid');
     const response = await axios.put(`${this.baseURL}api/resource/Customer/${name}`, customerData, {
-      headers: { Cookie: sid, 'Content-Type': 'application/json' }
+      headers: await this.getAuthHeaders()
     });
     return response.data;
   }
 
   async getSalesOrders(limit = 50, offset = 0, search = '') {
-    const sid = await AsyncStorage.getItem('sid');
     const params: any = {
       limit_page_length: limit,
       limit_start: offset,
@@ -204,21 +218,61 @@ class ApiService implements IApiService {
     
     const response = await axios.get(`${this.baseURL}api/resource/Sales Order`, {
       params,
-      headers: { Cookie: sid }
+      headers: await this.getAuthHeaders(false)
     });
     return response.data;
   }
 
   async getQuotations(limit = 50, offset = 0, search = '') {
-    const sid = await AsyncStorage.getItem('sid');
-    const params: any = { limit_page_length: limit, limit_start: offset };
+    const params: any = {
+      limit_page_length: limit,
+      limit_start: offset,
+      fields: JSON.stringify([
+        "name",
+        "customer_name",
+        "email",
+        "transaction_date",
+        "valid_till",
+        "grand_total",
+        "total_qty",
+        "status"
+      ])
+    };
     if (search) {
-      params.filters = JSON.stringify([['party_name', 'like', `%${search}%`]]);
+      params.filters = JSON.stringify([['customer_name', 'like', `%${search}%`]]);
     }
     
     const response = await axios.get(`${this.baseURL}api/resource/Quotation`, {
       params,
-      headers: { Cookie: sid }
+      headers: await this.getAuthHeaders(false)
+    });
+    return response.data;
+  }
+
+  async getItems(limit = 50, offset = 0, search = '') {
+    const params: any = {
+      limit_page_length: limit,
+      limit_start: offset,
+      fields: JSON.stringify([
+        "name",
+        "item_name",
+        "item_code",
+        "description",
+        "item_group",
+        "standard_rate",
+        "valuation_rate",
+        "stock_qty",
+        "disabled",
+        "creation"
+      ])
+    };
+    if (search) {
+      params.filters = JSON.stringify([['item_name', 'like', `%${search}%`]]);
+    }
+    
+    const response = await axios.get(`${this.baseURL}api/resource/Item`, {
+      params,
+      headers: await this.getAuthHeaders(false)
     });
     return response.data;
   }

@@ -126,7 +126,7 @@ export default function DashboardScreen({ navigation }: any) {
               <Ionicons name="cash" size={16} color="#4CAF50" />
             </View>
             <View>
-              <Text style={styles.revenueLabel}>Total Revenue</Text>
+              <Text style={styles.revenueLabel}>Total Sales</Text>
               <Text style={styles.revenueValue}>{formatCurrency(data?.todaysSales || 0)}</Text>
             </View>
           </View>

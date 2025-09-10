@@ -100,4 +100,11 @@ export interface DashboardData {
   pendingDeliveries: number;
   pendingLeaves: number;
   expensesToday: number;
+  recentActivities: {
+    title: string;
+    subtitle: string;
+    time: string;
+    icon: string;
+    color: string;
+  }[];
 }
