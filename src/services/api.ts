@@ -24,6 +24,13 @@ interface IApiService {
     pendingDeliveries: number;
     pendingLeaves: number;
     expensesToday: number;
+    yearlyTarget: number;
+    totalYearlySales: number;
+    monthlyTarget: number;
+    totalMonthlySales: number;
+    quotationCount: number;
+    draftQuotations: number;
+    approvedQuotations: number;
     recentActivities: RecentActivity[];
   }>;
   getCustomers(limit?: number, offset?: number, search?: string): Promise<any>;
@@ -119,7 +126,11 @@ class ApiService implements IApiService {
         sum + (order.grand_total || 0), 0) || 0;
       
       const pendingOrders = salesOrders.data.data?.filter((order: any) =>
-        order.status === 'Draft' || order.status === 'To Deliver').length || 0;
+        order.status === 'pending').length || 0;
+
+      const quotationCount = quotations.data.data?.length || 0;
+      const draftQuotations = quotations.data.data?.filter((quote: any) => quote.status === 'Draft').length || 0;
+      const approvedQuotations = quotationCount - draftQuotations;
 
       return {
         todaysSales: totalSales,
@@ -127,6 +138,13 @@ class ApiService implements IApiService {
         pendingDeliveries: pendingOrders,
         pendingLeaves: 2,
         expensesToday: 450.00,
+        yearlyTarget: 5000000,
+        totalYearlySales: totalSales,
+        monthlyTarget: 500000,
+        totalMonthlySales: totalSales,
+        quotationCount,
+        draftQuotations,
+        approvedQuotations,
         recentActivities: this.getRecentActivities(salesOrders.data.data, quotations.data.data)
       };
     } catch (error: any) {

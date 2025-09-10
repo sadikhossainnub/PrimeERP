@@ -22,6 +22,15 @@ import SettingsScreen from '../screens/SettingsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import { MoreScreen } from './MoreScreen';
 import ApiService from '../services/api';
+import DeliveryNoteListScreen from '../screens/DeliveryNoteListScreen';
+import DeliveryNoteFormScreen from '../screens/DeliveryNoteFormScreen';
+import ExpenseClaimListScreen from '../screens/ExpenseClaimListScreen';
+import ExpenseClaimFormScreen from '../screens/ExpenseClaimFormScreen';
+import LeaveRequestListScreen from '../screens/LeaveRequestListScreen';
+import LeaveRequestFormScreen from '../screens/LeaveRequestFormScreen';
+import PaymentEntryListScreen from '../screens/PaymentEntryListScreen';
+import PaymentEntryFormScreen from '../screens/PaymentEntryFormScreen';
+
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -55,38 +64,51 @@ const SalesOrderStack = () => (
   </Stack.Navigator>
 );
 
+const DeliveryNoteStack = () => (
+    <Stack.Navigator>
+      <Stack.Screen name="DeliveryNoteList" component={DeliveryNoteListScreen} options={{ title: 'Delivery Notes' }} />
+      <Stack.Screen name="DeliveryNoteForm" component={DeliveryNoteFormScreen} options={{ title: 'Delivery Note Form' }} />
+    </Stack.Navigator>
+  );
+  
+  const ExpenseClaimStack = () => (
+    <Stack.Navigator>
+      <Stack.Screen name="ExpenseClaimList" component={ExpenseClaimListScreen} options={{ title: 'Expense Claims' }} />
+      <Stack.Screen name="ExpenseClaimForm" component={ExpenseClaimFormScreen} options={{ title: 'Expense Claim Form' }} />
+    </Stack.Navigator>
+  );
+  
+  const LeaveRequestStack = () => (
+    <Stack.Navigator>
+      <Stack.Screen name="LeaveRequestList" component={LeaveRequestListScreen} options={{ title: 'Leave Requests' }} />
+      <Stack.Screen name="LeaveRequestForm" component={LeaveRequestFormScreen} options={{ title: 'Leave Request Form' }} />
+    </Stack.Navigator>
+  );
+
+const PaymentEntryStack = () => (
+    <Stack.Navigator>
+        <Stack.Screen name="PaymentEntryList" component={PaymentEntryListScreen} options={{ title: 'Payment Entries' }} />
+        <Stack.Screen name="PaymentEntryForm" component={PaymentEntryFormScreen} options={{ title: 'Payment Entry Form' }} />
+    </Stack.Navigator>
+    );
+
 const MoreStack = ({ onLogout }: { onLogout: () => void }) => (
-  <Stack.Navigator>
-    <Stack.Screen name="MoreMain" options={{ title: 'More' }}>
-      {(props) => <MoreTabScreen {...props} onLogout={onLogout} />}
-    </Stack.Screen>
-    <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
-  </Stack.Navigator>
-);
+    <Stack.Navigator>
+      <Stack.Screen name="MoreMain" options={{ title: 'More' }}>
+        {(props) => <MoreTabScreen {...props} onLogout={onLogout} />}
+      </Stack.Screen>
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+    </Stack.Navigator>
+  );
 
 function MoreTabScreen({ navigation, onLogout }: any) {
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const userData = await ApiService.getCurrentUser();
-      setUser(userData);
-    } catch (error) {
-      setUser(null);
-    }
-  };
-
   const handleLogout = async () => {
     await ApiService.logout();
     onLogout();
   };
 
   return (
-    <MoreScreen user={user} onLogout={handleLogout} navigation={navigation} />
+    <MoreScreen onLogout={handleLogout} navigation={navigation} />
   );
 }
 
@@ -168,6 +190,10 @@ const AppStack = ({ onLogout }: { onLogout: () => void }) => (
       <Stack.Screen name="Main" options={{ headerShown: false }}>
         {() => <MainTabs onLogout={onLogout} />}
       </Stack.Screen>
+        <Stack.Screen name="DeliveryNotes" component={DeliveryNoteStack} options={{ headerShown: false }} />
+        <Stack.Screen name="ExpenseClaims" component={ExpenseClaimStack} options={{ headerShown: false }} />
+        <Stack.Screen name="LeaveRequests" component={LeaveRequestStack} options={{ headerShown: false }} />
+        <Stack.Screen name="PaymentEntries" component={PaymentEntryStack} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 

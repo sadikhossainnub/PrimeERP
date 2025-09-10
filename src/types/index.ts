@@ -100,6 +100,13 @@ export interface DashboardData {
   pendingDeliveries: number;
   pendingLeaves: number;
   expensesToday: number;
+  yearlyTarget: number;
+  totalYearlySales: number;
+  monthlyTarget: number;
+  totalMonthlySales: number;
+  quotationCount: number;
+  draftQuotations: number;
+  approvedQuotations: number;
   recentActivities: {
     title: string;
     subtitle: string;

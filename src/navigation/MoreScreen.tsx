@@ -8,43 +8,63 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import ApiService from '../services/api';
 
 interface MoreScreenProps {
-  user: { email: string; name: string; token: string } | null;
   onLogout: () => Promise<void>;
   navigation?: any;
 }
 
-export function MoreScreen({ user, onLogout, navigation }: MoreScreenProps) {
+export function MoreScreen({ onLogout, navigation }: MoreScreenProps) {
+  const [user, setUser] = React.useState<{ email: string; name: string; token: string } | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  const fetchUser = async () => {
+    try {
+      const userData = await ApiService.getCurrentUser();
+      setUser(userData);
+    } catch (error) {
+      console.error('Failed to fetch user', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUser();
+    }, [])
+  );
   const menuItems = [
     {
       title: 'Payment Entries',
       subtitle: 'Manage payments and receipts',
       icon: 'card',
       color: '#3b82f6',
-      onPress: () => Alert.alert('Navigation', 'PaymentsList not implemented yet.'),
+      onPress: () => navigation?.navigate('PaymentEntries'),
     },
     {
       title: 'Delivery Notes',
       subtitle: 'Track product deliveries',
       icon: 'car',
       color: '#10b981',
-      onPress: () => Alert.alert('Navigation', 'DeliveryNotesList not implemented yet.'),
+      onPress: () => navigation?.navigate('DeliveryNotes'),
     },
     {
       title: 'Expense Claims',
       subtitle: 'Submit and track expenses',
       icon: 'receipt',
       color: '#f59e0b',
-      onPress: () => Alert.alert('Navigation', 'ExpensesList not implemented yet.'),
+      onPress: () => navigation?.navigate('ExpenseClaims'),
     },
     {
       title: 'Leave Requests',
       subtitle: 'Apply for time off',
       icon: 'calendar',
       color: '#8b5cf6',
-      onPress: () => Alert.alert('Navigation', 'LeavesList not implemented yet.'),
+      onPress: () => navigation?.navigate('LeaveRequests'),
     },
   ];
 
@@ -124,8 +144,8 @@ export function MoreScreen({ user, onLogout, navigation }: MoreScreenProps) {
             <Ionicons name="person" size={32} color="#ffffff" />
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.name || 'User'}</Text>
-            <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+            <Text style={styles.userName}>{loading ? 'Loading...' : user?.name || 'User'}</Text>
+            <Text style={styles.userEmail}>{loading ? '...' : user?.email || 'user@example.com'}</Text>
           </View>
         </View>
       </View>
@@ -177,7 +197,7 @@ export function MoreScreen({ user, onLogout, navigation }: MoreScreenProps) {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>ERPNext Mobile</Text>
+        <Text style={styles.footerText}>Prime ERP Mobile</Text>
         <Text style={styles.footerSubtext}>Built for productivity on the go</Text>
       </View>
     </ScrollView>

@@ -88,13 +88,13 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.actionGrid}>
           <TouchableOpacity 
             style={styles.actionButton} 
-            onPress={() => navigation.navigate('SalesOrderForm')}
+            onPress={() => navigation.navigate('Orders', { screen: 'SalesOrderForm' })}
           >
             <Text style={styles.actionButtonText}>Sales Order</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButtonOutline} 
-            onPress={() => navigation.navigate('QuotationForm')}
+            onPress={() => navigation.navigate('Quotes', { screen: 'QuotationForm' })}
           >
             <Text style={styles.actionButtonOutlineText}>Qoutation</Text>
           </TouchableOpacity>
@@ -102,14 +102,14 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.actionGrid}>
           <TouchableOpacity 
             style={styles.actionButtonOutline} 
-            onPress={() => navigation.navigate('CustomerList')}
+            onPress={() => navigation.navigate('Customers', { screen: 'CustomerList' })}
           >
             <Ionicons name="people" size={16} color="#2196F3" />
             <Text style={styles.actionButtonOutlineText}>Customers</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButtonOutline} 
-            onPress={() => navigation.navigate('ItemList')}
+            onPress={() => navigation.navigate('Items', { screen: 'ItemList' })}
           >
             <Ionicons name="cube" size={16} color="#2196F3" />
             <Text style={styles.actionButtonOutlineText}>Items</Text>
@@ -127,12 +127,16 @@ export default function DashboardScreen({ navigation }: any) {
             </View>
             <View>
               <Text style={styles.revenueLabel}>Total Sales</Text>
-              <Text style={styles.revenueValue}>{formatCurrency(data?.todaysSales || 0)}</Text>
+              <Text style={styles.revenueValue}>{formatCurrency(data?.totalYearlySales || 0)}</Text>
             </View>
           </View>
           <View style={styles.trendContainer}>
             <Ionicons name="trending-up" size={14} color="#4CAF50" />
-            <Text style={styles.trendText}>+12.5%</Text>
+            <Text style={styles.trendText}>
+              {data?.yearlyTarget
+                ? `${((data.totalYearlySales / data.yearlyTarget) * 100).toFixed(2)}%`
+                : '+12.5%'}
+            </Text>
           </View>
         </View>
         
@@ -143,12 +147,16 @@ export default function DashboardScreen({ navigation }: any) {
             </View>
             <View>
               <Text style={styles.revenueLabel}>This Month</Text>
-              <Text style={styles.revenueValue}>{formatCurrency((data?.todaysSales || 0) * 0.8)}</Text>
+              <Text style={styles.revenueValue}>{formatCurrency(data?.totalMonthlySales || 0)}</Text>
             </View>
           </View>
           <View style={styles.trendContainer}>
             <Ionicons name="trending-up" size={14} color="#2196F3" />
-            <Text style={[styles.trendText, { color: '#2196F3' }]}>+8.2%</Text>
+            <Text style={[styles.trendText, { color: '#2196F3' }]}>
+              {data?.monthlyTarget
+                ? `${((data.totalMonthlySales / data.monthlyTarget) * 100).toFixed(2)}%`
+                : '+8.2%'}
+            </Text>
           </View>
         </View>
       </View>
@@ -193,14 +201,14 @@ export default function DashboardScreen({ navigation }: any) {
           </View>
           <View style={styles.summaryContent}>
             <View style={styles.summaryMain}>
-              <Text style={styles.summaryNumber}>12</Text>
+              <Text style={styles.summaryNumber}>{data?.quotationCount || 0}</Text>
               <View style={styles.summaryBadge}>
-                <Text style={styles.summaryBadgeText}>3 drafts</Text>
+                <Text style={styles.summaryBadgeText}>{data?.draftQuotations || 0} drafts</Text>
               </View>
             </View>
             <View style={styles.summaryDetail}>
               <Ionicons name="checkmark-circle" size={12} color="#4CAF50" />
-              <Text style={styles.summaryDetailText}>9 approved</Text>
+              <Text style={styles.summaryDetailText}>{data?.approvedQuotations || 0} approved</Text>
             </View>
           </View>
         </View>
