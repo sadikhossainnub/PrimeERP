@@ -97,10 +97,28 @@ class ApiService implements IApiService {
   }
 
   async getCurrentUser() {
-    const response = await axios.get(`${this.baseURL}api/method/frappe.auth.get_logged_user`, {
-      headers: await this.getAuthHeaders(false)
-    });
-    return response.data.message;
+    try {
+      const userResponse = await axios.get(`${this.baseURL}api/method/frappe.auth.get_logged_user`, {
+        headers: await this.getAuthHeaders(false)
+      });
+      
+      const username = userResponse.data.message;
+      
+      // Fetch full user profile
+      const profileResponse = await axios.get(`${this.baseURL}api/resource/User/${username}`, {
+        headers: await this.getAuthHeaders(false)
+      });
+      
+      const userData = profileResponse.data.data;
+      return {
+        email: userData.email || username,
+        name: userData.full_name || userData.first_name || username,
+        username: username
+      };
+    } catch (error: any) {
+      console.error('Failed to fetch user data:', error);
+      throw error;
+    }
   }
 
   async getDashboardData() {
