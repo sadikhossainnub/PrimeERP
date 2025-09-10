@@ -129,7 +129,7 @@ export default function CustomerListScreen({ navigation }: any) {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.getCustomers(50, 0, searchQuery);
+      const response = await ApiService.getCustomers();
       const customerData = response.data || [];
       
       const serverCustomers = await Promise.all(

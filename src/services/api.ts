@@ -2,8 +2,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL, API_KEY, API_SECRET } from '../config';
 
-// Set default headers for all axios requests
-axios.defaults.headers.common['Expect'] = '';
+// Configure axios defaults
+axios.defaults.timeout = 30000;
 
 interface RecentActivity {
   type: string;
@@ -128,15 +128,15 @@ class ApiService implements IApiService {
       
       const [salesOrders, quotations, customers] = await Promise.all([
         axios.get(`${this.baseURL}api/resource/Sales Order`, {
-          params: { limit_page_length: 100 },
+          params: { limit_page_length: 0 },
           headers
         }),
         axios.get(`${this.baseURL}api/resource/Quotation`, {
-          params: { limit_page_length: 100 },
+          params: { limit_page_length: 0 },
           headers
         }),
         axios.get(`${this.baseURL}api/resource/Customer`, {
-          params: { limit_page_length: 10 },
+          params: { limit_page_length: 0 },
           headers
         })
       ]);
@@ -200,9 +200,9 @@ class ApiService implements IApiService {
     return activities.slice(0, 5);
   }
 
-  async getCustomers(limit = 20, offset = 0, search = '') {
+  async getCustomers(limit = 0, offset = 0, search = '') {
     const params: any = {
-      limit_page_length: limit,
+      limit_page_length: 0,
       limit_start: offset,
       fields: JSON.stringify([
         "name",
@@ -270,9 +270,9 @@ class ApiService implements IApiService {
     return response.data;
   }
 
-  async getSalesOrders(limit = 50, offset = 0, search = '') {
+  async getSalesOrders(limit = 0, offset = 0, search = '') {
     const params: any = {
-      limit_page_length: limit,
+      limit_page_length: 0,
       limit_start: offset,
       fields: JSON.stringify([
         "name",
@@ -296,9 +296,9 @@ class ApiService implements IApiService {
     return response.data;
   }
 
-  async getQuotations(limit = 50, offset = 0, search = '') {
+  async getQuotations(limit = 0, offset = 0, search = '') {
     const params: any = {
-      limit_page_length: limit,
+      limit_page_length: 0,
       limit_start: offset,
       fields: JSON.stringify([
         "name",
@@ -322,32 +322,47 @@ class ApiService implements IApiService {
     return response.data;
   }
 
-  async getItems(limit = 50, offset = 0, search = '') {
-    const params: any = {
-      limit_page_length: limit,
-      limit_start: offset,
-      fields: JSON.stringify([
-        "name",
-        "item_name",
-        "item_code",
-        "description",
-        "item_group",
-        "standard_rate",
-        "valuation_rate",
-        "stock_qty",
-        "disabled",
-        "creation"
-      ])
-    };
-    if (search) {
-      params.filters = JSON.stringify([['item_name', 'like', `%${search}%`]]);
+  async getItems(limit = 0, offset = 0, search = '') {
+    try {
+      const params: any = {
+        limit_page_length: 0,
+        limit_start: offset
+      };
+      if (search) {
+        params.filters = JSON.stringify([['item_name', 'like', `%${search}%`]]);
+      }
+      
+      const response = await axios.get(`${this.baseURL}api/resource/Item`, {
+        params,
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Items API error:', error.response?.status, error.response?.data);
+      throw error;
     }
-    
-    const response = await axios.get(`${this.baseURL}api/resource/Item`, {
-      params,
-      headers: await this.getAuthHeaders(false)
-    });
-    return response.data;
+  }
+
+  async getItemGroups(limit = 0, offset = 0) {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Item Group`, {
+        params: {
+          limit_page_length: 0,
+          limit_start: offset
+        },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Item Groups API error:', error.response?.status, error.response?.data);
+      throw error;
+    }
   }
 }
 

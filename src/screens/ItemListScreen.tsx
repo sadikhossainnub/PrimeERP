@@ -32,41 +32,52 @@ interface Item {
 
 const mockItems: Item[] = [
   {
-    name: 'Professional Software License',
+    id: '1',
+    item_code: 'SW-001',
+    item_name: 'Professional Software License',
     description: 'Annual subscription for professional software suite',
-    category: 'Software',
-    price: 299.99,
-    cost: 180.00,
-    stock: 50,
-    lowStockThreshold: 10,
-    status: 'active'
+    item_group: 'Software',
+    standard_rate: 299.99,
+    valuation_rate: 180.00,
+    stock_qty: 50,
+    stock_uom: 'Nos',
+    status: 'active',
+    creation: '2025-01-01',
+    is_stock_item: false
   },
   {
-    name: 'Cloud Storage Subscription',
+    id: '2',
+    item_code: 'CS-001',
+    item_name: 'Cloud Storage Subscription',
     description: 'Monthly cloud storage plan - 1TB',
-    category: 'Cloud Services',
-    price: 49.99,
-    cost: 25.00,
-    stock: 999,
-    lowStockThreshold: 50,
-    status: 'active'
+    item_group: 'Cloud Services',
+    standard_rate: 49.99,
+    valuation_rate: 25.00,
+    stock_qty: 999,
+    stock_uom: 'Nos',
+    status: 'active',
+    creation: '2025-01-02',
+    is_stock_item: false
   },
   {
-    name: 'Technical Support Package',
+    id: '3',
+    item_code: 'TS-001',
+    item_name: 'Technical Support Package',
     description: 'Premium technical support for 6 months',
-    category: 'Services',
-    price: 199.99,
-    cost: 120.00,
-    stock: 25,
-    lowStockThreshold: 5,
-    status: 'active'
+    item_group: 'Services',
+    standard_rate: 199.99,
+    valuation_rate: 120.00,
+    stock_qty: 25,
+    stock_uom: 'Nos',
+    status: 'active',
+    creation: '2025-01-03',
+    is_stock_item: true
   }
 ];
 
-const categories = ['All', 'Software', 'Cloud Services', 'Services', 'Training', 'Security'];
-
 export default function ItemListScreen({ navigation }: any) {
   const [items, setItems] = useState<Item[]>(mockItems);
+  const [itemGroups, setItemGroups] = useState<string[]>(['All']);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,11 +93,21 @@ export default function ItemListScreen({ navigation }: any) {
 
   const filteredItems = items.filter(item => {
     const matchesSearch = 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.item_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'All' || item.item_group === selectedCategory;
     const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
+    
+    console.log('Filter debug:', {
+      itemName: item.item_name,
+      itemGroup: item.item_group,
+      selectedCategory,
+      matchesCategory,
+      matchesSearch,
+      matchesStatus
+    });
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -94,8 +115,12 @@ export default function ItemListScreen({ navigation }: any) {
   const loadItems = async () => {
     try {
       setLoading(true);
-      const response = await ApiService.getItems(50, 0, searchQuery);
-      const serverItems = response.data?.map((item: any) => ({
+      const [itemsResponse, groupsResponse] = await Promise.all([
+        ApiService.getItems(0, 0, searchQuery),
+        ApiService.getItemGroups()
+      ]);
+      
+      const serverItems = itemsResponse.data?.map((item: any) => ({
         id: item.name,
         item_code: item.item_code || item.name,
         item_name: item.item_name || item.name,
@@ -110,6 +135,9 @@ export default function ItemListScreen({ navigation }: any) {
         creation: item.creation || new Date().toISOString(),
         is_stock_item: item.is_stock_item || false
       })) || [];
+      
+      const groups = ['All', ...groupsResponse.data?.map((group: any) => group.name) || []];
+      setItemGroups(groups);
       setItems(serverItems);
     } catch (error) {
       console.error('Failed to load items:', error);
@@ -132,6 +160,8 @@ export default function ItemListScreen({ navigation }: any) {
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -292,6 +322,27 @@ export default function ItemListScreen({ navigation }: any) {
           />
         </View>
 
+        {/* Category Filter */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+          {itemGroups.map(group => (
+            <TouchableOpacity
+              key={group}
+              style={[
+                styles.filterButton,
+                selectedCategory === group && styles.filterButtonActive
+              ]}
+              onPress={() => setSelectedCategory(group)}
+            >
+              <Text style={[
+                styles.filterButtonText,
+                selectedCategory === group && styles.filterButtonTextActive
+              ]}>
+                {group}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         {/* Status Filter */}
         <View style={styles.filterContainer}>
           {statusOptions.map(option => (
@@ -327,7 +378,7 @@ export default function ItemListScreen({ navigation }: any) {
       <FlatList
         data={filteredItems}
         renderItem={renderItem}
-        keyExtractor={(item) => item.name}
+        keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
@@ -391,6 +442,9 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 8,
+  },
+  filterScroll: {
     marginBottom: 8,
   },
   filterButton: {
