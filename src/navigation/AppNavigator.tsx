@@ -6,9 +6,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Alert } from 'react-native';
 import { Badge } from 'react-native-paper';
 import { theme } from '../styles/theme';
-
-import DashboardScreen from '../screens/DashboardScreen';
-import CustomerListScreen from '../screens/CustomerListScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+ 
+ import DashboardScreen from '../screens/DashboardScreen';
+ import CustomerListScreen from '../screens/CustomerListScreen';
 import CustomerFormScreen from '../screens/CustomerFormScreen';
 import ItemListScreen from '../screens/ItemListScreen';
 import ItemFormScreen from '../screens/ItemFormScreen';
@@ -169,8 +170,10 @@ const AppStack = ({ onLogout }: { onLogout: () => void }) => (
 export default function AppNavigator() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
+  const handleLogin = (user: any) => {
+    if (user) {
+      setIsAuthenticated(true);
+    }
   };
 
   const handleLogout = () => {
@@ -180,8 +183,13 @@ export default function AppNavigator() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await ApiService.getCurrentUser();
-        setIsAuthenticated(true);
+        const sid = await AsyncStorage.getItem('sid');
+        if (sid) {
+          await ApiService.getCurrentUser();
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
       } catch (error) {
         setIsAuthenticated(false);
       }

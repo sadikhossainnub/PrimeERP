@@ -48,10 +48,7 @@ export default function DashboardScreen({ navigation }: any) {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `৳${amount.toLocaleString('en-BD')}`;
   };
 
   const getStatusColor = () => {
@@ -207,6 +204,23 @@ export default function DashboardScreen({ navigation }: any) {
             </View>
           </View>
         </View>
+      </View>
+
+      {/* Recent Activity */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Recent Activity</Text>
+        {data?.recentActivities?.map((activity, index) => (
+          <View key={index} style={styles.activityItem}>
+            <View style={[styles.activityIcon, { backgroundColor: `${activity.color}20` }]}>
+              <Ionicons name={activity.icon as any} size={16} color={activity.color} />
+            </View>
+            <View style={styles.activityContent}>
+              <Text style={styles.activityTitle}>{activity.title}</Text>
+              <Text style={styles.activitySubtitle}>{activity.subtitle}</Text>
+            </View>
+            <Text style={styles.activityTime}>{activity.time}</Text>
+          </View>
+        ))}
       </View>
 
       {/* Alerts */}
@@ -451,5 +465,34 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     fontSize: 12,
     fontWeight: '500',
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  activityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  activitySubtitle: {
+    fontSize: 12,
+    color: '#666',
+  },
+  activityTime: {
+    fontSize: 11,
+    color: '#999',
   },
 });

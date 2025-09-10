@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ApiService from '../services/api';
+import apiService from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface SalesOrder {
@@ -24,7 +24,7 @@ export default function SalesOrderListScreen({ navigation }: any) {
 
   const loadOrders = async () => {
     try {
-      const response = await ApiService.getList('Sales Order', undefined, undefined, 50);
+      const response = await apiService.getSalesOrders(50, 0, searchQuery);
       setOrders(response.data || []);
     } catch (error) {
       console.error('Failed to load sales orders:', error);
@@ -37,7 +37,7 @@ export default function SalesOrderListScreen({ navigation }: any) {
           transaction_date: '2024-01-15',
           delivery_date: '2024-01-25',
           grand_total: 15000,
-          currency: 'USD',
+          currency: 'BDT',
           status: 'To Deliver and Bill'
         },
         {
@@ -47,7 +47,7 @@ export default function SalesOrderListScreen({ navigation }: any) {
           transaction_date: '2024-01-16',
           delivery_date: '2024-01-26',
           grand_total: 8500,
-          currency: 'USD',
+          currency: 'BDT',
           status: 'Draft'
         }
       ]);
@@ -61,6 +61,15 @@ export default function SalesOrderListScreen({ navigation }: any) {
     loadOrders();
   }, []);
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== '') {
+        loadOrders();
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   const onRefresh = () => {
     setRefreshing(true);
     loadOrders();
@@ -69,6 +78,7 @@ export default function SalesOrderListScreen({ navigation }: any) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Draft': return '#FF9800';
+      case 'Approved': return '#4CAF50';
       case 'To Deliver and Bill': return '#2196F3';
       case 'To Bill': return '#9C27B0';
       case 'Completed': return '#4CAF50';
@@ -100,6 +110,7 @@ export default function SalesOrderListScreen({ navigation }: any) {
   const statusOptions = [
     { value: 'all', label: 'All' },
     { value: 'Draft', label: 'Draft' },
+    { value: 'Approved', label: 'Approved' },
     { value: 'To Deliver and Bill', label: 'Confirmed' },
     { value: 'To Bill', label: 'Shipped' },
     { value: 'Completed', label: 'Delivered' },
@@ -115,11 +126,9 @@ export default function SalesOrderListScreen({ navigation }: any) {
     });
   };
 
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
+  const formatCurrency = (amount: number, currency: string = 'BDT') => {
+    if (!amount || isNaN(amount)) return '৳0';
+    return `৳${amount.toLocaleString('en-BD')}`;
   };
 
   const renderOrder = ({ item }: { item: SalesOrder }) => (
@@ -157,7 +166,7 @@ export default function SalesOrderListScreen({ navigation }: any) {
         
         {item.delivery_date && (
           <View style={styles.deliveryRow}>
-            <Ionicons name="truck-outline" size={14} color="#666" />
+            <Ionicons name="car-outline" size={14} color="#666" />
             <View style={styles.detailText}>
               <Text style={styles.detailLabel}>Delivery</Text>
               <Text style={styles.detailValue}>{formatDate(item.delivery_date)}</Text>

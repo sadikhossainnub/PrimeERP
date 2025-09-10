@@ -1,180 +1,226 @@
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, API_KEY, API_SECRET } from '../config';
 
-class ApiService {
-  private api: AxiosInstance;
-  private baseURL: string = '';
+interface RecentActivity {
+  type: string;
+  title: string;
+  subtitle: string;
+  time: string;
+  icon: string;
+  color: string;
+}
 
-  constructor() {
-    this.api = axios.create({
-      baseURL: 'http://paperware.jfmart.site',
-      timeout: 10000
-    });
-    this.baseURL = 'http://paperware.jfmart.site';
-    this.setupInterceptors();
-  }
+interface IApiService {
+  login(username: string, password: string): Promise<{ success: boolean; user: string }>;
+  logout(): Promise<void>;
+  getCurrentUser(): Promise<any>;
+  getDashboardData(): Promise<any>;
+  getCustomers(limit?: number, offset?: number, search?: string): Promise<any>;
+  getCustomer(name: string): Promise<any>;
+  createCustomer(customerData: any): Promise<any>;
+  updateCustomer(name: string, customerData: any): Promise<any>;
+  getSalesOrders(limit?: number, offset?: number, search?: string): Promise<any>;
+}
 
-  private setupInterceptors() {
-    this.api.interceptors.request.use(async (config) => {
-      const apiKey = await AsyncStorage.getItem('apiKey');
-      const apiSecret = await AsyncStorage.getItem('apiSecret');
-
-      config.headers['Content-Type'] = 'application/json';
-      config.headers['Accept'] = 'application/json';
-
-      if (apiKey && apiSecret) {
-        config.headers['Authorization'] = `token ${apiKey}:${apiSecret}`;
-      }
-      
-      console.log('API Request:', config.method?.toUpperCase(), config.url, 'Auth:', config.headers.Authorization);
-      return config;
-    });
-    
-    this.api.interceptors.response.use(
-      (response) => {
-        console.log('API Response:', response.status, response.config.url);
-        return response;
-      },
-      (error) => {
-        console.error('API Error:', error.message, error.config?.url);
-        if (error.response?.status === 403) {
-          console.error('Permission denied - check API key permissions');
-        }
-        return Promise.reject(error);
-      }
-    );
-  }
-
-  async getCurrentUser() {
-    const response = await this.api.get('/api/method/frappe.realtime.get_user_info');
-    return response.data.message;
-  }
-
-  async getEmployeeProfile(userId: string) {
-    const response = await this.getList('Employee', { user_id: userId }, ['name', 'employee_name', 'user_id', 'company']);
-    return response.data?.[0] || null;
-  }
-
-  async setCredentials(serverUrl: string, apiKey: string, apiSecret: string) {
-    await AsyncStorage.setItem('serverUrl', serverUrl);
-    await AsyncStorage.setItem('apiKey', apiKey);
-    await AsyncStorage.setItem('apiSecret', apiSecret);
-    
-    this.baseURL = serverUrl;
-    this.api.defaults.baseURL = serverUrl;
-    this.api.defaults.headers.Authorization = `token ${apiKey}:${apiSecret}`;
-  }
-
-  async getList(doctype: string, filters?: any, fields?: string[], limit?: number, offset?: number) {
-    const params: any = {};
-    if (filters) params.filters = JSON.stringify(filters);
-    if (fields) params.fields = JSON.stringify(fields);
-    if (limit) params.limit_page_length = limit;
-    if (offset) params.limit_start = offset;
-
-    const response = await this.api.get(`/api/resource/${doctype}`, { params });
-    return response.data;
-  }
-
-  async getDoc(doctype: string, name: string) {
-    const response = await this.api.get(`/api/resource/${doctype}/${name}`);
-    return response.data;
-  }
-
-  async createDoc(doctype: string, data: any) {
-    const response = await this.api.post(`/api/resource/${doctype}`, data);
-    return response.data;
-  }
-
-  async updateDoc(doctype: string, name: string, data: any) {
-    const response = await this.api.put(`/api/resource/${doctype}/${name}`, data);
-    return response.data;
-  }
-
-  async deleteDoc(doctype: string, name: string) {
-    const response = await this.api.delete(`/api/resource/${doctype}/${name}`);
-    return response.data;
-  }
-
-  async callMethod(method: string, args?: any) {
-    const response = await this.api.post(`/api/method/${method}`, args);
-    return response.data;
-  }
+class ApiService implements IApiService {
+  private baseURL: string = API_URL;
 
   async login(username: string, password: string) {
-    // Demo user credentials
-    if (username === 'demo' && password === 'password') {
-      const demoUser = {
-        email: 'demo@example.com',
-        fullName: 'Demo User'
-      };
-      await AsyncStorage.setItem('sessionUser', JSON.stringify(demoUser));
-      return {
-        user: demoUser,
-        token: 'session-token'
-      };
-    }
-
     try {
-      const response = await this.api.post('/api/method/login', {
-        usr: username,
-        pwd: password
+      const loginData = { usr: username, pwd: password };
+
+      const response = await axios.post(`${this.baseURL}api/method/login`, loginData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       });
-      
-      if (response.data.message) {
-        await AsyncStorage.setItem('sessionUser', JSON.stringify(response.data.message));
-        return {
-          user: response.data.message,
-          token: 'session-token'
-        };
+
+      if (response.data.message === 'Logged In') {
+        const sidCookie = response.headers['set-cookie']?.[0];
+        if (sidCookie) {
+          await AsyncStorage.setItem('sid', sidCookie);
+        }
+        return { success: true, user: username };
       }
-      
-      throw new Error('Invalid credentials');
+
+      throw new Error('Login failed');
     } catch (error: any) {
-      console.error('Login error:', error);
-      throw new Error('Login failed. Please check your credentials.');
+      throw new Error(error.response?.data?.message || 'Login failed');
     }
   }
 
   async logout() {
     try {
-      await this.api.post('/api/method/logout');
-      await AsyncStorage.multiRemove(['serverUrl', 'apiKey', 'apiSecret', 'sessionUser']);
-      delete this.api.defaults.headers.Authorization;
-    } catch (error) {
-      console.error('Logout error:', error);
+      console.log('Attempting logout...');
+      await axios.post(`${this.baseURL}api/method/logout`, {}, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+      await AsyncStorage.removeItem('sid');
+      console.log('Logout successful');
+    } catch (error: any) {
+      console.error('Logout failed:', error);
+      throw new Error(error.response?.data?.message || 'Logout failed');
     }
+  }
+
+  async getCurrentUser() {
+    const sid = await AsyncStorage.getItem('sid');
+    const response = await axios.get(`${this.baseURL}api/method/frappe.auth.get_logged_user`, {
+      headers: { Cookie: sid }
+    });
+    return response.data.message;
   }
 
   async getDashboardData() {
     try {
-      console.log('Fetching dashboard data from:', this.baseURL);
+      const sid = await AsyncStorage.getItem('sid');
+      const headers = { Cookie: sid };
       
-      // Test basic connectivity first
-      const userResponse = await this.api.get('/api/method/frappe.realtime.get_user_info');
-      console.log('Authenticated user:', userResponse.data.message);
+      const [salesOrders, quotations, customers] = await Promise.all([
+        axios.get(`${this.baseURL}api/resource/Sales Order`, {
+          params: { limit_page_length: 100 },
+          headers
+        }),
+        axios.get(`${this.baseURL}api/resource/Quotation`, {
+          params: { limit_page_length: 100 },
+          headers
+        }),
+        axios.get(`${this.baseURL}api/resource/Customer`, {
+          params: { limit_page_length: 10 },
+          headers
+        })
+      ]);
+
+      const totalSales = salesOrders.data.data?.reduce((sum: number, order: any) => 
+        sum + (order.grand_total || 0), 0) || 0;
       
-      // Try to get basic data that should be accessible
-      const customerData = await this.getList('Customer', undefined, ['name'], 10);
-      const itemData = await this.getList('Item', undefined, ['name'], 10);
-      
+      const pendingOrders = salesOrders.data.data?.filter((order: any) => 
+        order.status === 'Draft' || order.status === 'To Deliver').length || 0;
+
       return {
-        todaysSales: 1250.50, // Demo data since Sales Invoice not accessible
-        orderCount: customerData.data?.length || 0,
-        pendingDeliveries: 3, // Demo data
-        pendingLeaves: 2, // Demo data
-        expensesToday: 450.00 // Demo data
+        todaysSales: totalSales,
+        orderCount: salesOrders.data.data?.length || 0,
+        pendingDeliveries: pendingOrders,
+        pendingLeaves: 2,
+        expensesToday: 450.00,
+        recentActivities: this.getRecentActivities(salesOrders.data.data, quotations.data.data)
       };
     } catch (error: any) {
-      console.error('Dashboard API Error:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        data: error.response?.data,
-        url: this.baseURL
-      });
+      console.error('Dashboard data fetch error:', error);
       throw error;
     }
+  }
+
+  private getRecentActivities(salesOrders: any[], quotations: any[]) {
+    const activities: RecentActivity[] = [];
+    
+    salesOrders?.slice(0, 3).forEach(order => {
+      activities.push({
+        type: 'Sales Order',
+        title: `${order.name} created`,
+        subtitle: `Customer: ${order.customer}`,
+        time: new Date(order.creation).toLocaleDateString(),
+        icon: 'document-text',
+        color: '#2196F3'
+      });
+    });
+    
+    quotations?.slice(0, 2).forEach(quote => {
+      activities.push({
+        type: 'Quotation',
+        title: `${quote.name} created`,
+        subtitle: `Customer: ${quote.party_name}`,
+        time: new Date(quote.creation).toLocaleDateString(),
+        icon: 'receipt',
+        color: '#9C27B0'
+      });
+    });
+    
+    return activities.slice(0, 5);
+  }
+
+  async getCustomers(limit = 20, offset = 0, search = '') {
+    const sid = await AsyncStorage.getItem('sid');
+    const params: any = { limit_page_length: limit, limit_start: offset };
+    if (search) {
+      params.filters = JSON.stringify([['customer_name', 'like', `%${search}%`]]);
+    }
+    
+    const response = await axios.get(`${this.baseURL}api/resource/Customer`, {
+      params,
+      headers: { Cookie: sid }
+    });
+    return response.data;
+  }
+
+  async getCustomer(name: string) {
+    const sid = await AsyncStorage.getItem('sid');
+    const response = await axios.get(`${this.baseURL}api/resource/Customer/${name}`, {
+      headers: { Cookie: sid }
+    });
+    return response.data;
+  }
+
+  async createCustomer(customerData: any) {
+    const sid = await AsyncStorage.getItem('sid');
+    const response = await axios.post(`${this.baseURL}api/resource/Customer`, customerData, {
+      headers: { Cookie: sid, 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  }
+
+  async updateCustomer(name: string, customerData: any) {
+    const sid = await AsyncStorage.getItem('sid');
+    const response = await axios.put(`${this.baseURL}api/resource/Customer/${name}`, customerData, {
+      headers: { Cookie: sid, 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  }
+
+  async getSalesOrders(limit = 50, offset = 0, search = '') {
+    const sid = await AsyncStorage.getItem('sid');
+    const params: any = {
+      limit_page_length: limit,
+      limit_start: offset,
+      fields: JSON.stringify([
+        "name",
+        "customer",
+        "customer_name",
+        "transaction_date",
+        "delivery_date",
+        "grand_total",
+        "currency",
+        "status"
+      ])
+    };
+    if (search) {
+      params.filters = JSON.stringify([['customer', 'like', `%${search}%`]]);
+    }
+    
+    const response = await axios.get(`${this.baseURL}api/resource/Sales Order`, {
+      params,
+      headers: { Cookie: sid }
+    });
+    return response.data;
+  }
+
+  async getQuotations(limit = 50, offset = 0, search = '') {
+    const sid = await AsyncStorage.getItem('sid');
+    const params: any = { limit_page_length: limit, limit_start: offset };
+    if (search) {
+      params.filters = JSON.stringify([['party_name', 'like', `%${search}%`]]);
+    }
+    
+    const response = await axios.get(`${this.baseURL}api/resource/Quotation`, {
+      params,
+      headers: { Cookie: sid }
+    });
+    return response.data;
   }
 }
 

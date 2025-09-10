@@ -115,10 +115,23 @@ export default function QuotationListScreen({ navigation }: any) {
   const loadQuotations = async () => {
     try {
       setLoading(true);
-      // Use mock data for now
-      setQuotations(mockQuotations);
+      const response = await ApiService.getQuotations(50, 0, searchQuery);
+      const serverQuotations = response.data?.map((quotation: any) => ({
+        id: quotation.name,
+        quotationNumber: quotation.name,
+        customerName: quotation.party_name || quotation.customer_name,
+        customerEmail: quotation.contact_email || 'N/A',
+        quotationDate: quotation.transaction_date || quotation.creation,
+        validUntil: quotation.valid_till || quotation.creation,
+        totalAmount: quotation.grand_total || 0,
+        currency: 'BDT',
+        status: quotation.status?.toLowerCase() || 'draft',
+        items: quotation.total_qty || 0
+      })) || [];
+      setQuotations(serverQuotations);
     } catch (error) {
       console.error('Failed to load quotations:', error);
+      setQuotations(mockQuotations);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -128,6 +141,15 @@ export default function QuotationListScreen({ navigation }: any) {
   useEffect(() => {
     loadQuotations();
   }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== '') {
+        loadQuotations();
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -163,11 +185,9 @@ export default function QuotationListScreen({ navigation }: any) {
     });
   };
 
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
+  const formatCurrency = (amount: number, currency: string = 'BDT') => {
+    if (!amount || isNaN(amount)) return '৳0';
+    return `৳${amount.toLocaleString('en-BD')}`;
   };
 
   const isExpiringSoon = (validUntil: string) => {

@@ -15,14 +15,14 @@ import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/api';
 
 interface LoginProps {
-  onLogin: (user: { email: string; name: string; token: string }) => void;
+  onLogin: (user: any) => void;
 }
 
 export default function LoginScreen({ onLogin }: LoginProps) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    rememberMe: false
+    rememberMe: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -67,12 +67,10 @@ export default function LoginScreen({ onLogin }: LoginProps) {
     setApiError('');
     
     try {
-      const { user } = await ApiService.login(formData.email, formData.password);
-      onLogin({
-        email: user.email,
-        name: user.fullName,
-        token: 'session-token'
-      });
+      console.log('Attempting login with:', formData.email, formData.password);
+      const result = await ApiService.login(formData.email, formData.password);
+      console.log('Login successful:', result);
+      onLogin(result.user);
     } catch (error) {
       console.error('Login failed:', error);
       setApiError('Login failed. Please check your credentials and try again.');
@@ -104,6 +102,7 @@ export default function LoginScreen({ onLogin }: LoginProps) {
               <Text style={styles.errorText}>{apiError}</Text>
             </View>
           )}
+
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Username or Email</Text>

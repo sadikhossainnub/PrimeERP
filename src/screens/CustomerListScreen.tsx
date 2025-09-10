@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -15,6 +15,7 @@ interface Customer {
   totalOrders: number;
   totalSpent: number;
   lastOrderDate: string;
+  image?: string;
 }
 
 const mockCustomers: Customer[] = [
@@ -99,10 +100,7 @@ export default function CustomerListScreen({ navigation }: any) {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    return `৳${amount.toLocaleString('en-BD')}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -131,10 +129,24 @@ export default function CustomerListScreen({ navigation }: any) {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      // Use mock data for now
-      setCustomers(mockCustomers);
+      const response = await ApiService.getCustomers(50, 0, searchQuery);
+      const serverCustomers = response.data?.map((customer: any) => ({
+        id: customer.name,
+        name: customer.customer_name || customer.name,
+        email: customer.email_id || 'N/A',
+        phone: customer.mobile_no || 'N/A',
+        company: customer.customer_name || customer.name,
+        address: customer.customer_primary_address || 'N/A',
+        status: customer.disabled ? 'inactive' : 'active',
+        totalOrders: 0,
+        totalSpent: 0,
+        lastOrderDate: customer.creation || new Date().toISOString(),
+        image: customer.image
+      })) || [];
+      setCustomers(serverCustomers);
     } catch (error) {
       console.error('Failed to load customers:', error);
+      setCustomers(mockCustomers);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -144,6 +156,15 @@ export default function CustomerListScreen({ navigation }: any) {
   useEffect(() => {
     loadCustomers();
   }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== '') {
+        loadCustomers();
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -175,7 +196,15 @@ export default function CustomerListScreen({ navigation }: any) {
       <View style={styles.customerHeader}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getInitials(item.name)}</Text>
+            {item.image ? (
+              <Image 
+                source={{ uri: `https://paperware.jfmart.site${item.image}` }} 
+                style={styles.avatarImage}
+                defaultSource={require('../../assets/icon.png')}
+              />
+            ) : (
+              <Text style={styles.avatarText}>{getInitials(item.name)}</Text>
+            )}
           </View>
           <View style={styles.customerInfo}>
             <Text style={styles.customerName}>{item.name}</Text>
@@ -395,6 +424,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  avatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   customerInfo: {
     flex: 1,
