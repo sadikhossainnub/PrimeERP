@@ -6,9 +6,11 @@ import {
   ScrollView, 
   TouchableOpacity, 
   ActivityIndicator, 
-  Alert 
+  Alert,
+  Image,
+  TextInput as RNTextInput
 } from 'react-native';
-import { TextInput } from 'react-native-paper';
+import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import ApiService from '../services/api';
 
@@ -158,12 +160,14 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
         {/* Paper Cup Fields */}
         {(item_type === 'Paper CUP' || item_type === 'Paper Cup Lid' || 
           item_type === 'Paper Cup Jacket' || item_type === 'Paper Cup Holder') && (
-          <View style={styles.formGroup}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Paper Cup Size</Text>
             <View style={styles.pickerContainer}>
+              <Ionicons name="resize" size={20} color="#666" style={styles.pickerIcon} />
               <Picker
                 selectedValue={formData.paper_cup_size}
                 onValueChange={(value) => handleInputChange('paper_cup_size', value)}
+                style={styles.picker}
               >
                 <Picker.Item label="Select Size" value="" />
                 {paperCupSizes.map(size => (
@@ -177,12 +181,14 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
         {/* Paper Cup Specific */}
         {item_type === 'Paper CUP' && (
           <>
-            <View style={styles.formGroup}>
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Paper Cup Type</Text>
               <View style={styles.pickerContainer}>
+                <Ionicons name="thermometer" size={20} color="#666" style={styles.pickerIcon} />
                 <Picker
                   selectedValue={formData.paper_cup_type}
                   onValueChange={(value) => handleInputChange('paper_cup_type', value)}
+                  style={styles.picker}
                 >
                   <Picker.Item label="Select Type" value="" />
                   <Picker.Item label="Hot" value="Hot" />
@@ -193,12 +199,14 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
               </View>
             </View>
 
-            <View style={styles.formGroup}>
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Paper Cup Wall</Text>
               <View style={styles.pickerContainer}>
+                <Ionicons name="layers" size={20} color="#666" style={styles.pickerIcon} />
                 <Picker
                   selectedValue={formData.paper_cup_wall}
                   onValueChange={(value) => handleInputChange('paper_cup_wall', value)}
+                  style={styles.picker}
                 >
                   <Picker.Item label="Select Wall" value="" />
                   <Picker.Item label="Single Wall" value="Single Wall" />
@@ -214,12 +222,14 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
         {/* Lid Specific */}
         {item_type === 'Paper Cup Lid' && (
           <>
-            <View style={styles.formGroup}>
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Lid Size</Text>
               <View style={styles.pickerContainer}>
+                <Ionicons name="ellipse" size={20} color="#666" style={styles.pickerIcon} />
                 <Picker
                   selectedValue={formData.lid_size}
                   onValueChange={(value) => handleInputChange('lid_size', value)}
+                  style={styles.picker}
                 >
                   <Picker.Item label="Select Size" value="" />
                   <Picker.Item label="70 MM" value="70 MM" />
@@ -229,12 +239,14 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
               </View>
             </View>
 
-            <View style={styles.formGroup}>
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Lid Color</Text>
               <View style={styles.pickerContainer}>
+                <Ionicons name="color-palette" size={20} color="#666" style={styles.pickerIcon} />
                 <Picker
                   selectedValue={formData.lid_color}
                   onValueChange={(value) => handleInputChange('lid_color', value)}
+                  style={styles.picker}
                 >
                   <Picker.Item label="Select Color" value="" />
                   <Picker.Item label="White" value="White" />
@@ -250,12 +262,14 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
         {(item_type === 'Paper CUP' || item_type === 'Paper Cup Jacket' || 
           item_type === 'Paper Cup Holder' || item_type === 'Outer BOX' || 
           item_type === 'Bags') && (
-          <View style={styles.formGroup}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Printing Colour</Text>
             <View style={styles.pickerContainer}>
+              <Ionicons name="brush" size={20} color="#666" style={styles.pickerIcon} />
               <Picker
                 selectedValue={formData.printing_colour}
                 onValueChange={(value) => handleInputChange('printing_colour', value)}
+                style={styles.picker}
               >
                 <Picker.Item label="Select Colour" value="" />
                 {[1,2,3,4,5,6,7,8].map(num => (
@@ -270,114 +284,177 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>
-            {isEdit ? 'Edit Item' : 'Create Item'}
-          </Text>
+    <View style={styles.container}>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Item Image Section */}
+        <View style={styles.imageSection}>
+          <View style={styles.imagePlaceholder}>
+            <Ionicons name="camera" size={32} color="#666" />
+            <Text style={styles.imageText}>Add Photo</Text>
+          </View>
         </View>
-        
-        <View style={styles.cardContent}>
-          {/* Basic Information */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Item Code *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.item_code}
-              onChangeText={(text) => handleInputChange('item_code', text)}
-              placeholder="Enter item code"
-            />
-          </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Item Name *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.item_name}
-              onChangeText={(text) => handleInputChange('item_name', text)}
-              placeholder="Enter item name"
-            />
+        {/* Basic Information Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="information-circle" size={20} color="#2196F3" />
+            <Text style={styles.cardTitle}>Basic Information</Text>
           </View>
+          
+          <View style={styles.cardContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Item Code *</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="barcode" size={20} color="#666" style={styles.inputIcon} />
+                <RNTextInput
+                  style={styles.input}
+                  value={formData.item_code}
+                  onChangeText={(text) => handleInputChange('item_code', text)}
+                  placeholder="Enter item code"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Item Group *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.item_group}
-              onChangeText={(text) => handleInputChange('item_group', text)}
-              placeholder="Enter item group"
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Item Name *</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="cube" size={20} color="#666" style={styles.inputIcon} />
+                <RNTextInput
+                  style={styles.input}
+                  value={formData.item_name}
+                  onChangeText={(text) => handleInputChange('item_name', text)}
+                  placeholder="Enter item name"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Stock UOM *</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.stock_uom}
-              onChangeText={(text) => handleInputChange('stock_uom', text)}
-              placeholder="Enter unit of measure"
-            />
-          </View>
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Item Group *</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="folder" size={20} color="#666" style={styles.inputIcon} />
+                  <RNTextInput
+                    style={styles.input}
+                    value={formData.item_group}
+                    onChangeText={(text) => handleInputChange('item_group', text)}
+                    placeholder="Group"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={formData.description}
-              onChangeText={(text) => handleInputChange('description', text)}
-              placeholder="Enter description"
-              multiline
-              numberOfLines={3}
-            />
-          </View>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Stock UOM *</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="scale" size={20} color="#666" style={styles.inputIcon} />
+                  <RNTextInput
+                    style={styles.input}
+                    value={formData.stock_uom}
+                    onChangeText={(text) => handleInputChange('stock_uom', text)}
+                    placeholder="UOM"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
+            </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Item Type</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={formData.item_type}
-                onValueChange={(value) => handleInputChange('item_type', value)}
-              >
-                <Picker.Item label="Select Item Type" value="" />
-                {itemTypes.map(type => (
-                  <Picker.Item key={type} label={type} value={type} />
-                ))}
-              </Picker>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Description</Text>
+              <View style={[styles.inputContainer, styles.textAreaContainer]}>
+                <RNTextInput
+                  style={[styles.input, styles.textArea]}
+                  value={formData.description}
+                  onChangeText={(text) => handleInputChange('description', text)}
+                  placeholder="Enter item description..."
+                  placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
             </View>
           </View>
+        </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Customer Target Price</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.customer_target_price}
-              onChangeText={(text) => handleInputChange('customer_target_price', text)}
-              placeholder="Enter target price"
-              keyboardType="numeric"
-            />
+        {/* Item Type & Pricing Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="pricetag" size={20} color="#FF9800" />
+            <Text style={styles.cardTitle}>Type & Pricing</Text>
           </View>
+          
+          <View style={styles.cardContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Item Type</Text>
+              <View style={styles.pickerContainer}>
+                <Ionicons name="list" size={20} color="#666" style={styles.pickerIcon} />
+                <Picker
+                  selectedValue={formData.item_type}
+                  onValueChange={(value) => handleInputChange('item_type', value)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Select Item Type" value="" />
+                  {itemTypes.map(type => (
+                    <Picker.Item key={type} label={type} value={type} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
 
-          {/* Conditional Fields */}
-          {renderConditionalFields()}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Customer Target Price</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="cash" size={20} color="#666" style={styles.inputIcon} />
+                <RNTextInput
+                  style={styles.input}
+                  value={formData.customer_target_price}
+                  onChangeText={(text) => handleInputChange('customer_target_price', text)}
+                  placeholder="0.00"
+                  placeholderTextColor="#999"
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+          </View>
+        </View>
 
-          {/* Save Button */}
-          <TouchableOpacity 
-            style={styles.saveButton} 
-            onPress={handleSave} 
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
+        {/* Conditional Fields */}
+        {formData.item_type && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Ionicons name="settings" size={20} color="#9C27B0" />
+              <Text style={styles.cardTitle}>Specifications</Text>
+            </View>
+            <View style={styles.cardContent}>
+              {renderConditionalFields()}
+            </View>
+          </View>
+        )}
+
+        {/* Save Button */}
+        <TouchableOpacity 
+          style={styles.saveButton} 
+          onPress={handleSave} 
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="save" size={20} color="#fff" style={styles.saveIcon} />
               <Text style={styles.saveButtonText}>
                 {isEdit ? 'Update Item' : 'Create Item'}
               </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -385,71 +462,141 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  content: {
+    flex: 1,
     padding: 16,
+  },
+  imageSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  imagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
-    marginBottom: 16,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 20,
   },
   cardHeader: {
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#030213',
+    color: '#1f2937',
+    marginLeft: 12,
   },
   cardContent: {
-    padding: 16,
+    padding: 20,
   },
-  formGroup: {
-    marginBottom: 16,
+  row: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  inputGroup: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#030213',
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 8,
   },
-  input: {
-    height: 48,
-    borderColor: '#e2e8f0',
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    minHeight: 52,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
     fontSize: 16,
-    color: '#030213',
-    backgroundColor: '#f8f8f8',
+    color: '#1f2937',
+    paddingVertical: 0,
+  },
+  textAreaContainer: {
+    alignItems: 'flex-start',
+    paddingVertical: 16,
   },
   textArea: {
-    height: 80,
+    minHeight: 80,
     textAlignVertical: 'top',
-    paddingTop: 12,
   },
   pickerContainer: {
-    borderColor: '#e2e8f0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: '#f8f8f8',
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    paddingLeft: 16,
+    minHeight: 52,
+  },
+  pickerIcon: {
+    marginRight: 12,
+  },
+  picker: {
+    flex: 1,
+    color: '#1f2937',
   },
   saveButton: {
-    backgroundColor: '#030213',
+    flexDirection: 'row',
+    backgroundColor: '#2196F3',
     paddingVertical: 16,
-    borderRadius: 8,
+    paddingHorizontal: 24,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#2196F3',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveIcon: {
+    marginRight: 8,
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  bottomPadding: {
+    height: 20,
   },
 });

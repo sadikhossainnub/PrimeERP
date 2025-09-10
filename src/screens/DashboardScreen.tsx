@@ -23,8 +23,8 @@ export default function DashboardScreen({ navigation }: any) {
         ApiService.getCurrentUser()
       ]);
       setData(dashboardData);
-      if (userInfo?.fullname) {
-        setUserName(userInfo.fullname);
+      if (userInfo?.name) {
+        setUserName(userInfo.name);
       }
       setConnectionStatus('connected');
     } catch (error: any) {
@@ -62,7 +62,7 @@ export default function DashboardScreen({ navigation }: any) {
 
   const getStatusText = () => {
     switch (connectionStatus) {
-      case 'connected': return 'Connected to ERPNext';
+      case 'connected': return 'Connected to PrimerERP';
       case 'connecting': return 'Connecting...';
       case 'error': return 'Connection Failed';
       default: return 'Unknown Status';
@@ -79,7 +79,11 @@ export default function DashboardScreen({ navigation }: any) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>Welcome {userName}</Text>
+        <Text style={styles.headerTitle}>Hello {userName}</Text>
+        <View style={styles.statusContainer}>
+          <View style={[styles.statusIndicator, { backgroundColor: getStatusColor() }]} />
+          <Text style={styles.statusText}>{getStatusText()}</Text>
+        </View>
       </View>
 
       {/* Quick Actions */}
@@ -274,6 +278,21 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize['2xl'],
     fontWeight: theme.typography.fontWeight.bold as '700',
     color: theme.colors.foreground,
+    marginBottom: 4,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#666',
   },
   card: {
     backgroundColor: theme.colors.card,

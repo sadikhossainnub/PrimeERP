@@ -40,6 +40,8 @@ interface IApiService {
   getSalesOrders(limit?: number, offset?: number, search?: string): Promise<any>;
   getQuotations(limit?: number, offset?: number, search?: string): Promise<any>;
   getItems(limit?: number, offset?: number, search?: string): Promise<any>;
+  updateDoc(doctype: string, docname: string, data: any): Promise<any>;
+  createDoc(doctype: string, data: any): Promise<any>;
 }
 
 class ApiService implements IApiService {
@@ -363,6 +365,20 @@ class ApiService implements IApiService {
       console.error('Item Groups API error:', error.response?.status, error.response?.data);
       throw error;
     }
+  }
+
+  async createDoc(doctype: string, data: any) {
+    const response = await axios.post(`${this.baseURL}api/resource/${doctype}`, data, {
+      headers: await this.getAuthHeaders()
+    });
+    return response.data;
+  }
+
+  async updateDoc(doctype: string, docname: string, data: any) {
+    const response = await axios.put(`${this.baseURL}api/resource/${doctype}/${docname}`, data, {
+      headers: await this.getAuthHeaders()
+    });
+    return response.data;
   }
 }
 
