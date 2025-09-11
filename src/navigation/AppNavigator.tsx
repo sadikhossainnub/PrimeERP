@@ -35,6 +35,29 @@ import PaymentEntryFormScreen from '../screens/PaymentEntryFormScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
+export type RootStackParamList = {
+  Main: undefined;
+  Login: undefined;
+  CustomerList: undefined;
+  CustomerForm: { name?: string };
+  ItemList: undefined;
+  ItemForm: { name?: string };
+  QuotationList: undefined;
+  QuotationForm: { name?: string };
+  SalesOrderList: undefined;
+  SalesOrderForm: { name?: string };
+  DeliveryNoteList: undefined;
+  DeliveryNoteForm: { name?: string };
+  ExpenseClaimList: undefined;
+  ExpenseClaimForm: { name?: string };
+  LeaveRequestList: undefined;
+  LeaveRequestForm: { name?: string };
+  PaymentEntryList: undefined;
+  PaymentEntryForm: { name?: string };
+  MoreMain: undefined;
+  Settings: undefined;
+};
+
 
 const CustomerStack = () => (
   <Stack.Navigator>
@@ -210,22 +233,6 @@ export default function AppNavigator() {
     setIsAuthenticated(false);
   };
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const sid = await AsyncStorage.getItem('sid');
-        if (sid) {
-          await ApiService.getCurrentUser();
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        setIsAuthenticated(false);
-      }
-    };
-    checkAuth();
-  }, []);
 
   return (
     <NavigationContainer>

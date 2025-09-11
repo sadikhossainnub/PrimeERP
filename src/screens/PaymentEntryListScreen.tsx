@@ -1,34 +1,71 @@
-import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../styles/theme';
-
-const DUMMY_PAYMENTS = [
-  { id: '1', customer: 'John Doe', amount: 100.0, date: '2023-10-27' },
-  { id: '2', customer: 'Jane Smith', amount: 150.0, date: '2023-10-26' },
-];
+import api from '../services/api';
+import { PaymentEntry } from '../types';
+import { Input } from '../components/ui/input';
 
 export default function PaymentEntryListScreen({ navigation }: any) {
-  const renderPaymentItem = ({ item }: any) => (
+  const [payments, setPayments] = useState<PaymentEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getPaymentEntries(20, 0, search);
+      setPayments(response.data);
+    } catch (error) {
+      console.error('Failed to fetch payment entries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchPayments();
+    }, [search])
+  );
+
+  const renderPaymentItem = ({ item }: { item: PaymentEntry }) => (
     <TouchableOpacity
       style={styles.itemContainer}
-      onPress={() => navigation.navigate('PaymentEntryForm', { paymentId: item.id })}
+      onPress={() => navigation.navigate('PaymentEntryForm', { paymentId: item.name })}
     >
       <View style={styles.itemDetails}>
-        <Text style={styles.itemTitle}>{item.customer}</Text>
-        <Text style={styles.itemSubtitle}>Amount: ${item.amount.toFixed(2)}</Text>
+        <Text style={styles.itemTitle}>{item.party}</Text>
+        <Text style={styles.itemSubtitle}>Amount: ${item.paid_amount.toFixed(2)}</Text>
       </View>
-      <Text style={styles.itemDate}>{item.date}</Text>
+      <Text style={styles.itemDate}>{item.posting_date}</Text>
       <Ionicons name="chevron-forward" size={24} color={theme.colors.mutedForeground} />
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      <View style={styles.searchContainer}>
+        <Input
+          placeholder="Search by party name..."
+          value={search}
+          onChangeText={setSearch}
+          style={styles.searchInput}
+        />
+      </View>
       <FlatList
-        data={DUMMY_PAYMENTS}
+        data={payments}
         renderItem={renderPaymentItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.name}
         contentContainerStyle={styles.listContent}
       />
       <TouchableOpacity
@@ -46,8 +83,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  searchContainer: {
     padding: 16,
+    backgroundColor: theme.colors.background,
+  },
+  searchInput: {
+    backgroundColor: theme.colors.card,
+    borderColor: theme.colors.border,
   },
   itemContainer: {
     flexDirection: 'row',

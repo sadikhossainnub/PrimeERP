@@ -40,8 +40,17 @@ interface IApiService {
   getSalesOrders(limit?: number, offset?: number, search?: string): Promise<any>;
   getQuotations(limit?: number, offset?: number, search?: string): Promise<any>;
   getItems(limit?: number, offset?: number, search?: string): Promise<any>;
+  getPaymentEntries(limit?: number, offset?: number, search?: string): Promise<any>;
+  getDeliveryNotes(limit?: number, offset?: number, search?: string): Promise<any>;
   updateDoc(doctype: string, docname: string, data: any): Promise<any>;
   createDoc(doctype: string, data: any): Promise<any>;
+  getTerritories(): Promise<any>;
+  getDivisions(): Promise<any>;
+  getDistricts(): Promise<any>;
+  getThanas(): Promise<any>;
+  getCustomerGroups(): Promise<any>;
+  getAccountManagers(): Promise<any>;
+  getUOMs(): Promise<any>;
 }
 
 class ApiService implements IApiService {
@@ -260,7 +269,7 @@ class ApiService implements IApiService {
 
   async createCustomer(customerData: any) {
     const response = await axios.post(`${this.baseURL}api/resource/Customer`, customerData, {
-      headers: await this.getAuthHeaders()
+      headers: await this.getAuthHeaders(false)
     });
     return response.data;
   }
@@ -367,19 +376,195 @@ class ApiService implements IApiService {
     }
   }
 
+  async getTerritories() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Territory`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Territories API error:', error);
+      return { data: [] };
+    }
+  }
+
+  async getDivisions() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Division`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Divisions API error:', error);
+      return { data: [] };
+    }
+  }
+
+  async getDistricts() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/District`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Districts API error:', error);
+      return { data: [] };
+    }
+  }
+
+  async getThanas() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Thana`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Thanas API error:', error);
+      return { data: [] };
+    }
+  }
+
   async createDoc(doctype: string, data: any) {
-    const response = await axios.post(`${this.baseURL}api/resource/${doctype}`, data, {
-      headers: await this.getAuthHeaders()
+    try {
+      const response = await axios.post(`${this.baseURL}api/resource/${doctype}`, data, {
+        headers: await this.getAuthHeaders(false)
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Create ${doctype} API error:`, error.response?.status, error.response?.data);
+      throw error;
+    }
+  }
+
+  async updateDoc(doctype: string, name: string, data: any) {
+    try {
+      const response = await axios.put(`${this.baseURL}api/resource/${doctype}/${name}`, data, {
+        headers: await this.getAuthHeaders(false)
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`Update ${doctype} API error:`, error.response?.status, error.response?.data);
+      throw error;
+    }
+  }
+  async getPaymentEntries(limit = 0, offset = 0, search = '') {
+    const params: any = {
+      limit_page_length: limit,
+      limit_start: offset,
+      fields: JSON.stringify([
+        "name",
+        "posting_date",
+        "party_type",
+        "party",
+        "paid_amount",
+        "mode_of_payment",
+        "status"
+      ])
+    };
+    if (search) {
+      params.filters = JSON.stringify([['party', 'like', `%${search}%`]]);
+    }
+    
+    const response = await axios.get(`${this.baseURL}api/resource/Payment Entry`, {
+      params,
+      headers: await this.getAuthHeaders(false)
     });
     return response.data;
   }
 
-  async updateDoc(doctype: string, docname: string, data: any) {
-    const response = await axios.put(`${this.baseURL}api/resource/${doctype}/${docname}`, data, {
-      headers: await this.getAuthHeaders()
+  async getDeliveryNotes(limit = 0, offset = 0, search = '') {
+    const params: any = {
+      limit_page_length: limit,
+      limit_start: offset,
+      fields: JSON.stringify([
+        "name",
+        "posting_date",
+        "customer",
+        "customer_name",
+        "grand_total",
+        "status"
+      ])
+    };
+    if (search) {
+      params.filters = JSON.stringify([['customer', 'like', `%${search}%`]]);
+    }
+    
+    const response = await axios.get(`${this.baseURL}api/resource/Delivery Note`, {
+      params,
+      headers: await this.getAuthHeaders(false)
     });
     return response.data;
   }
+
+
+  async getCustomerGroups() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Customer Group`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Customer Groups API error:', error);
+      return { data: [] };
+    }
+  }
+
+  async getAccountManagers() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/User`, {
+        params: { 
+          limit_page_length: 0,
+          fields: JSON.stringify(["name", "full_name"]),
+          filters: JSON.stringify([["role_profile_name", "=", "Account Manager"]])
+        },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Account Managers API error:', error);
+      return { data: [] };
+    }
+  }
+
+  async getUOMs() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/UOM`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('UOMs API error:', error);
+      return { data: [] };
+    }
+  }
+
 }
 
 export default new ApiService();

@@ -62,7 +62,7 @@ export default function DashboardScreen({ navigation }: any) {
 
   const getStatusText = () => {
     switch (connectionStatus) {
-      case 'connected': return 'Connected to PrimerERP';
+      case 'connected': return 'Connected to PrimeERP';
       case 'connecting': return 'Connecting...';
       case 'error': return 'Connection Failed';
       default: return 'Unknown Status';
@@ -100,7 +100,7 @@ export default function DashboardScreen({ navigation }: any) {
             style={styles.actionButtonOutline} 
             onPress={() => navigation.navigate('Quotes', { screen: 'QuotationForm' })}
           >
-            <Text style={styles.actionButtonOutlineText}>Qoutation</Text>
+            <Text style={styles.actionButtonOutlineText}>Quotation</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.actionGrid}>

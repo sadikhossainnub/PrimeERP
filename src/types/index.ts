@@ -10,6 +10,11 @@ export interface Customer {
   city?: string;
   state?: string;
   pincode?: string;
+  division?: string;
+  district?: string;
+  thana?: string;
+  account_manager?: string;
+  image?: string;
 }
 
 export interface Item {
@@ -92,6 +97,16 @@ export interface ExpenseClaim {
   total_claimed_amount: number;
   description?: string;
   status?: string;
+}
+
+export interface PaymentEntry {
+  name: string;
+  posting_date: string;
+  party_type: string;
+  party: string;
+  paid_amount: number;
+  mode_of_payment: string;
+  status: string;
 }
 
 export interface DashboardData {

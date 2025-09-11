@@ -7,6 +7,7 @@ export default function PaymentEntryFormScreen({ navigation, route }: any) {
   const [customer, setCustomer] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [time, setTime] = useState(new Date().toTimeString().split(' ')[0]);
 
   const { paymentId } = route.params || {};
 
@@ -14,7 +15,7 @@ export default function PaymentEntryFormScreen({ navigation, route }: any) {
 
   const handleSave = () => {
     // In a real app, you would save the data to your backend or state management
-    console.log('Saving payment:', { customer, amount, date });
+    console.log('Saving payment:', { customer, amount, date, time });
     navigation.goBack();
   };
 
@@ -49,6 +50,16 @@ export default function PaymentEntryFormScreen({ navigation, route }: any) {
             value={date}
             onChangeText={setDate}
             placeholder="YYYY-MM-DD"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Time</Text>
+          <TextInput
+            style={styles.input}
+            value={time}
+            onChangeText={setTime}
+            placeholder="HH:MM:SS"
           />
         </View>
 

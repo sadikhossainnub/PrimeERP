@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import ApiService from '../services/api';
+import SearchablePicker from '../components/ui/SearchablePicker';
 
 interface ItemFormProps {
   route?: any;
@@ -108,6 +109,50 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
   });
 
   const [loading, setLoading] = useState(false);
+  const [itemGroups, setItemGroups] = useState<string[]>([]);
+  const [fetchingItemGroups, setFetchingItemGroups] = useState(false);
+  const [uoms, setUoms] = useState<string[]>([]);
+  const [fetchingUoms, setFetchingUoms] = useState(false);
+
+  useEffect(() => {
+    const fetchItemGroups = async () => {
+      setFetchingItemGroups(true);
+      try {
+        const response = await ApiService.getItemGroups();
+        if (response && response.data) {
+          const groups = response.data.map((group: any) => group.name);
+          setItemGroups(groups);
+        }
+      } catch (error) {
+        console.error('Failed to fetch item groups:', error);
+        Alert.alert('Error', 'Failed to fetch item groups');
+      } finally {
+        setFetchingItemGroups(false);
+      }
+    };
+
+    fetchItemGroups();
+    const fetchUOMs = async () => {
+      setFetchingUoms(true);
+      try {
+        const response = await ApiService.getUOMs();
+        if (response && response.data) {
+          const uomNames = response.data.map((uom: any) => uom.name);
+          setUoms(uomNames);
+          if (!isEdit && uomNames.length > 0) {
+            setFormData(prev => ({ ...prev, stock_uom: uomNames[0] }));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch UOMs:', error);
+        Alert.alert('Error', 'Failed to fetch UOMs');
+      } finally {
+        setFetchingUoms(false);
+      }
+    };
+
+    fetchUOMs();
+  }, []);
 
   const itemTypes = [
     'Paper CUP', 'Paper Cup Lid', 'Paper Cup Jacket', 'Paper Cup Holder',
@@ -127,6 +172,7 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
 
   const handleSave = async () => {
     if (!formData.item_code.trim() || !formData.item_name.trim() || !formData.item_group.trim()) {
@@ -335,13 +381,13 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Item Group *</Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="folder" size={20} color="#666" style={styles.inputIcon} />
-                  <RNTextInput
-                    style={styles.input}
-                    value={formData.item_group}
-                    onChangeText={(text) => handleInputChange('item_group', text)}
-                    placeholder="Group"
-                    placeholderTextColor="#999"
+                  <SearchablePicker
+                    label="" // Label is already above
+                    options={itemGroups}
+                    selectedValue={formData.item_group}
+                    onValueChange={(value) => handleInputChange('item_group', value)}
+                    placeholder="Select Item Group"
+                    iconName="folder"
                   />
                 </View>
               </View>
@@ -349,13 +395,13 @@ export default function ItemFormScreen({ route, navigation }: ItemFormProps) {
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Text style={styles.label}>Stock UOM *</Text>
                 <View style={styles.inputContainer}>
-                  <Ionicons name="scale" size={20} color="#666" style={styles.inputIcon} />
-                  <RNTextInput
-                    style={styles.input}
-                    value={formData.stock_uom}
-                    onChangeText={(text) => handleInputChange('stock_uom', text)}
-                    placeholder="UOM"
-                    placeholderTextColor="#999"
+                  <SearchablePicker
+                    label="" // Label is already above
+                    options={uoms}
+                    selectedValue={formData.stock_uom}
+                    onValueChange={(value) => handleInputChange('stock_uom', value)}
+                    placeholder="Select UOM"
+                    iconName="scale"
                   />
                 </View>
               </View>
