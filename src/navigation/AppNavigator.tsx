@@ -304,7 +304,7 @@ const MainTabs = ({ onLogout }: { onLogout: () => void }) => {
               onPressedChange={setIsDarkMode}
               variant="outline"
             >
-              {isDarkMode ? '🌙' : '☀️'}
+              {isDarkMode ? <Text>🌙</Text> : <Text>☀️</Text>}
             </Toggle>
           </View>
         )

@@ -153,7 +153,7 @@ export default function DashboardScreen({ navigation }: any) {
             <Text style={styles.trendText}>
               {data?.yearlyTarget
                 ? `${((data.totalYearlySales / data.yearlyTarget) * 100).toFixed(2)}%`
-                : <Text>'+12.5%'</Text>}
+                : '+12.5%'}
             </Text>
           </View>
         </View>
@@ -173,7 +173,7 @@ export default function DashboardScreen({ navigation }: any) {
             <Text style={[styles.trendText, { color: '#2196F3' }]}>
               {data?.monthlyTarget
                 ? `${((data.totalMonthlySales / data.monthlyTarget) * 100).toFixed(2)}%`
-                : <Text>'+8.2%'</Text>}
+                : '+8.2%'}
             </Text>
           </View>
         </View>
