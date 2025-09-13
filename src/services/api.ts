@@ -325,6 +325,7 @@ class ApiService implements IApiService {
       }
       console.error('Customers API error:', error.response?.data?.message || error.message);
       throw error;
+      throw error;
     }
   }
 
@@ -1454,6 +1455,118 @@ class ApiService implements IApiService {
         return { data: [] };
       }
       console.error('Terms and Conditions API error:', error.response?.data?.message || error.message);
+      return { data: [] };
+    }
+  }
+
+  async getSuppliers(limit = 0, offset = 0, search = '') {
+    try {
+      const params: any = {
+        limit_page_length: limit,
+        limit_start: offset,
+        fields: JSON.stringify([
+          "name",
+          "supplier_name",
+          "email_id",
+          "mobile_no",
+          "supplier_group",
+          "creation"
+        ])
+      };
+      if (search) {
+        params.filters = JSON.stringify([['supplier_name', 'like', '%' + search + '%']]);
+      }
+      
+      const response = await axios.get(`${this.baseURL}api/resource/Supplier`, {
+        params,
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+        console.error('Network Error fetching suppliers:', error.message);
+        return { data: [] };
+      }
+      console.error('Suppliers API error:', error.response?.data?.message || error.message);
+      return { data: [] };
+    }
+  }
+
+  async getAccounts(limit = 0, offset = 0, search = '') {
+    try {
+      const params: any = {
+        limit_page_length: limit,
+        limit_start: offset,
+        fields: JSON.stringify([
+          "name",
+          "account_name",
+          "account_type",
+          "account_currency",
+          "is_group",
+          "disabled"
+        ])
+      };
+      if (search) {
+        params.filters = JSON.stringify([['account_name', 'like', '%' + search + '%']]);
+      }
+      
+      const response = await axios.get(`${this.baseURL}api/resource/Account`, {
+        params,
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+        console.error('Network Error fetching accounts:', error.message);
+        return { data: [] };
+      }
+      console.error('Accounts API error:', error.response?.data?.message || error.message);
+      return { data: [] };
+    }
+  }
+
+  async getModesOfPayment() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Mode of Payment`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+        console.error('Network Error fetching modes of payment:', error.message);
+        return { data: [] };
+      }
+      console.error('Modes of Payment API error:', error.response?.data?.message || error.message);
+      return { data: [] };
+    }
+  }
+
+  async getCostCenters() {
+    try {
+      const response = await axios.get(`${this.baseURL}api/resource/Cost Center`, {
+        params: { limit_page_length: 0 },
+        headers: {
+          'Authorization': `token ${API_KEY}:${API_SECRET}`,
+          'Accept': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+        console.error('Network Error fetching cost centers:', error.message);
+        return { data: [] };
+      }
+      console.error('Cost Centers API error:', error.response?.data?.message || error.message);
       return { data: [] };
     }
   }

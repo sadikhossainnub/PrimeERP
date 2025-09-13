@@ -107,13 +107,28 @@ export interface ExpenseClaim {
 }
 
 export interface PaymentEntry {
-  name: string;
-  posting_date: string;
-  party_type: string;
-  party: string;
+  name?: string;
+  naming_series?: string;
+  payment_type: string;
+  company: string;
+  cost_center?: string;
+  mode_of_payment?: string;
+  party_type?: string;
+  party?: string;
+  party_name?: string;
+  contact_person?: string;
+  contact_email?: string;
+  paid_from: string;
+  paid_to: string;
   paid_amount: number;
-  mode_of_payment: string;
-  status: string;
+  received_amount: number;
+  source_exchange_rate?: number;
+  target_exchange_rate?: number;
+  reference_no?: string;
+  reference_date?: string;
+  posting_date: string;
+  remarks?: string;
+  status?: string;
 }
 
 export interface DashboardData {

@@ -271,7 +271,7 @@ const MainTabs = ({ onLogout }: { onLogout: () => void }) => {
                   height: 16,
                 }}
               >
-                <Text style={{ color: 'white', fontSize: 10 }}>{badge}</Text>
+                {badge}
               </Badge>
             )}
             {hasError && (

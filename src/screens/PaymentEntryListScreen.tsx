@@ -41,8 +41,8 @@ export default function PaymentEntryListScreen({ navigation }: any) {
     }, [search])
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusColor = (status?: string) => {
+    switch (status?.toLowerCase()) {
       case 'submitted': return '#10b981';
       case 'draft': return '#f59e0b';
       case 'cancelled': return '#ef4444';
@@ -50,8 +50,8 @@ export default function PaymentEntryListScreen({ navigation }: any) {
     }
   };
 
-  const getPaymentIcon = (partyType: string) => {
-    switch (partyType.toLowerCase()) {
+  const getPaymentIcon = (partyType?: string) => {
+    switch (partyType?.toLowerCase()) {
       case 'customer': return 'account-circle';
       case 'supplier': return 'business';
       case 'employee': return 'person';
@@ -84,7 +84,7 @@ export default function PaymentEntryListScreen({ navigation }: any) {
             <Text style={styles.partyName} numberOfLines={1}>{item.party}</Text>
             <View style={styles.partyTypeContainer}>
               <View style={styles.partyTypeDot} />
-              <Text style={styles.partyType}>{item.party_type}</Text>
+              <Text style={styles.partyType}>{item.party_type ?? 'N/A'}</Text>
             </View>
           </View>
           <LinearGradient
@@ -171,7 +171,7 @@ export default function PaymentEntryListScreen({ navigation }: any) {
       <FlatList
         data={payments}
         renderItem={renderPaymentItem}
-        keyExtractor={(item) => item.name}
+        keyExtractor={(item) => item.name || Math.random().toString()}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl

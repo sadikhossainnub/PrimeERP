@@ -153,7 +153,7 @@ export default function DashboardScreen({ navigation }: any) {
             <Text style={styles.trendText}>
               {data?.yearlyTarget
                 ? `${((data.totalYearlySales / data.yearlyTarget) * 100).toFixed(2)}%`
-                : '+12.5%'}
+                : <Text>'+12.5%'</Text>}
             </Text>
           </View>
         </View>
@@ -173,7 +173,7 @@ export default function DashboardScreen({ navigation }: any) {
             <Text style={[styles.trendText, { color: '#2196F3' }]}>
               {data?.monthlyTarget
                 ? `${((data.totalMonthlySales / data.monthlyTarget) * 100).toFixed(2)}%`
-                : '+8.2%'}
+                : <Text>'+8.2%'</Text>}
             </Text>
           </View>
         </View>
@@ -188,7 +188,9 @@ export default function DashboardScreen({ navigation }: any) {
               <Text style={styles.summaryTitle}>Orders</Text>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('SalesOrderList')}>
-              <Ionicons name="arrow-forward" size={12} color="#666" />
+              <View>
+                <Ionicons name="arrow-forward" size={12} color="#666" />
+              </View>
             </TouchableOpacity>
           </View>
           <View style={styles.summaryContent}>
@@ -214,7 +216,9 @@ export default function DashboardScreen({ navigation }: any) {
               <Text style={styles.summaryTitle}>Quotes</Text>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('QuotationList')}>
-              <Ionicons name="arrow-forward" size={12} color="#666" />
+              <View>
+                <Ionicons name="arrow-forward" size={12} color="#666" />
+              </View>
             </TouchableOpacity>
           </View>
           <View style={styles.summaryContent}>
