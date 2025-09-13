@@ -11,7 +11,8 @@
       "backgroundColor": "#1A1A2E"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.PrimeERP"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +20,13 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["NOTIFICATIONS", "INTERNET"]
+      "permissions": [
+        "NOTIFICATIONS",
+        "INTERNET",
+        "NOTIFICATIONS",
+        "INTERNET"
+      ],
+      "package": "com.anonymous.PrimeERP"
     },
     "web": {
       "favicon": "./assets/favicon.png"
