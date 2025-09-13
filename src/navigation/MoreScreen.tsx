@@ -40,6 +40,20 @@ export function MoreScreen({ onLogout, navigation }: MoreScreenProps) {
   );
   const menuItems = [
     {
+      title: 'Attendance',
+      subtitle: 'Track your attendance records',
+      icon: 'time',
+      color: '#06b6d4',
+      onPress: () => navigation?.navigate('Attendance'),
+    },
+    {
+      title: 'Task',
+      subtitle: 'Manage your tasks and assignments',
+      icon: 'checkmark-circle',
+      color: '#84cc16',
+      onPress: () => navigation?.navigate('Tasks'),
+    },
+    {
       title: 'Payment Entries',
       subtitle: 'Manage payments and receipts',
       icon: 'card',

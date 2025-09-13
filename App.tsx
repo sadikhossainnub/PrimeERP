@@ -1,15 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider } from 'react-native-paper';
 import AppNavigator from './src/navigation/AppNavigator';
-import ApiService from './src/services/api';
-import NotificationService from './src/services/notifications';
+import SplashScreen from './src/components/SplashScreen';
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
+
   return (
     <PaperProvider>
       <AppNavigator />
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </PaperProvider>
   );
 }

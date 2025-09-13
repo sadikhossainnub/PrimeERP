@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -9,6 +9,7 @@ import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
 import { theme } from '../styles/theme';
+import ApiService from '../services/api';
 
 interface QuotationItem {
   id: string;
@@ -16,33 +17,60 @@ interface QuotationItem {
   description: string;
   quantity: number;
   unitPrice: number;
-  discount: number;
   total: number;
 }
 
 interface Customer {
-  id: string;
   name: string;
-  email: string;
-  company: string;
+  customer_name: string;
+  email_id?: string;
+  mobile_no?: string;
 }
 
-const mockCustomers: Customer[] = [
-  { id: '1', name: 'John Smith', email: 'john@acme.com', company: 'Acme Corporation' },
-  { id: '2', name: 'Sarah Johnson', email: 'sarah@globaltech.com', company: 'Global Tech Solutions' },
-  { id: '3', name: 'Mike Wilson', email: 'mike@digitaldyn.com', company: 'Digital Dynamics' },
-  { id: '4', name: 'Lisa Chen', email: 'lisa@innovatesys.com', company: 'Innovate Systems' },
-];
+interface Item {
+  name: string;
+  item_name: string;
+  standard_rate?: number;
+  description?: string;
+}
 
-const mockProducts = [
-  { id: '1', name: 'Professional Software License', price: 299.99 },
-  { id: '2', name: 'Cloud Storage Subscription', price: 49.99 },
-  { id: '3', name: 'Technical Support Package', price: 199.99 },
-  { id: '4', name: 'Custom Development Hours', price: 125.00 },
-  { id: '5', name: 'Training Workshop', price: 799.99 },
-  { id: '6', name: 'Security Audit Service', price: 1500.00 },
-  { id: '7', name: 'Maintenance Contract', price: 350.00 },
-];
+interface TaxTemplate {
+  name: string;
+  title: string;
+  taxes?: any[];
+}
+
+interface TaxCategory {
+  name: string;
+  title?: string;
+}
+
+interface ShippingRule {
+  name: string;
+  label?: string;
+}
+
+interface CouponCode {
+  name: string;
+  coupon_name?: string;
+}
+
+interface SalesPartner {
+  name: string;
+  partner_name?: string;
+}
+
+const stripHtml = (html: string) => {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .trim();
+};
 
 export default function QuotationFormScreen({ route, navigation }: any) {
   const quotation = route?.params?.quotation;
@@ -59,16 +87,41 @@ export default function QuotationFormScreen({ route, navigation }: any) {
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [validityPeriod, setValidityPeriod] = useState('30');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [vatRate, setVatRate] = useState('15');
+  const [additionalCharges, setAdditionalCharges] = useState(0);
+  const [taxTemplates, setTaxTemplates] = useState<TaxTemplate[]>([]);
+  const [selectedTaxTemplate, setSelectedTaxTemplate] = useState<TaxTemplate | null>(null);
+  const [showTaxTemplateModal, setShowTaxTemplateModal] = useState(false);
+  const [taxTemplateSearch, setTaxTemplateSearch] = useState('');
+  const [taxTemplatesLoading, setTaxTemplatesLoading] = useState(false);
 
-  const filteredCustomers = mockCustomers.filter(customer =>
-    customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    customer.company.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    customer.email.toLowerCase().includes(customerSearch.toLowerCase())
+
+  const [couponCodes, setCouponCodes] = useState<CouponCode[]>([]);
+  const [selectedCouponCode, setSelectedCouponCode] = useState<CouponCode | null>(null);
+  const [salesPartners, setSalesPartners] = useState<SalesPartner[]>([]);
+  const [selectedSalesPartner, setSelectedSalesPartner] = useState<SalesPartner | null>(null);
+  const [additionalDiscountPercentage, setAdditionalDiscountPercentage] = useState(0);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [applyDiscountOn, setApplyDiscountOn] = useState('Grand Total');
+
+
+  const [showCouponCodeModal, setShowCouponCodeModal] = useState(false);
+  const [showSalesPartnerModal, setShowSalesPartnerModal] = useState(false);
+
+  const filteredCustomers = customers.filter(customer =>
+    (customer.customer_name && customer.customer_name.toLowerCase().includes(customerSearch.toLowerCase())) ||
+    (customer.email_id && customer.email_id.toLowerCase().includes(customerSearch.toLowerCase()))
   );
 
-  const filteredProducts = mockProducts.filter(product =>
-    product.name.toLowerCase().includes(productSearch.toLowerCase())
-  );
+  const filteredProducts = products.filter(product => {
+    if (!productSearch) return true;
+    return product.item_name && product.item_name.toLowerCase().includes(productSearch.toLowerCase());
+  });
 
   useEffect(() => {
     if (validityPeriod && quotationDate) {
@@ -78,15 +131,169 @@ export default function QuotationFormScreen({ route, navigation }: any) {
     }
   }, [validityPeriod, quotationDate]);
 
-  const addItem = (product: typeof mockProducts[0]) => {
+  useEffect(() => {
+    if (isEdit && quotation) {
+      loadQuotationData();
+    }
+  }, [isEdit, quotation]);
+
+  const loadQuotationData = async () => {
+    try {
+      setLoading(true);
+      const response = await ApiService.getDocument('Quotation', quotation.quotationNumber || quotation.name);
+      const data = response.data;
+      
+      if (data.party_name || data.customer_name) {
+        setSelectedCustomer({
+          name: data.party_name || data.customer_name,
+          customer_name: data.customer_name || data.party_name,
+          email_id: data.email_id
+        });
+      }
+      
+      setQuotationDate(data.transaction_date || quotationDate);
+      setValidUntil(data.valid_till || validUntil);
+      setNotes(data.tc_name || '');
+      setTermsAndConditions(data.terms || '');
+      setVatRate(data.vat_rate?.toString() || '15');
+      setAdditionalCharges(data.additional_charges || 0);
+      setAdditionalDiscountPercentage(data.additional_discount_percentage || 0);
+      setDiscountAmount(data.discount_amount || 0);
+      setApplyDiscountOn(data.apply_discount_on || 'Grand Total');
+      
+      if (data.items && data.items.length > 0) {
+        const loadedItems = data.items.map((item: any, index: number) => ({
+          id: index.toString(),
+          name: item.item_code,
+          description: item.description || '',
+          quantity: item.qty || 1,
+          unitPrice: item.rate || 0,
+          total: (item.qty || 1) * (item.rate || 0)
+        }));
+        setItems(loadedItems);
+      }
+      
+      if (data.taxes_and_charges_template) {
+        try {
+          const templates = await ApiService.getSalesTaxesAndChargesTemplates();
+          const template = templates.data?.find((t: any) => t.name === data.taxes_and_charges_template);
+          if (template) {
+            setSelectedTaxTemplate(template);
+          }
+        } catch (error) {
+          console.error('Failed to load tax template:', error);
+        }
+      }
+      
+      if (data.coupon_code) {
+        try {
+          const coupons = await ApiService.getCouponCodes();
+          const coupon = coupons.data?.find((c: any) => c.name === data.coupon_code);
+          if (coupon) {
+            setSelectedCouponCode(coupon);
+          }
+        } catch (error) {
+          console.error('Failed to load coupon code:', error);
+        }
+      }
+      
+      if (data.referral_sales_partner) {
+        try {
+          const partners = await ApiService.getSalesPartners();
+          const partner = partners.data?.find((p: any) => p.name === data.referral_sales_partner);
+          if (partner) {
+            setSelectedSalesPartner(partner);
+          }
+        } catch (error) {
+          console.error('Failed to load sales partner:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load quotation data:', error);
+      Alert.alert('Error', 'Failed to load quotation data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      setCustomersLoading(true);
+      const response = await ApiService.getCustomers();
+      setCustomers(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch customers:', error);
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setProductsLoading(true);
+      console.log('Fetching products...');
+      const response = await ApiService.getItems();
+      console.log('Products response:', response);
+      console.log('Products data:', response.data);
+      setProducts(response.data || []);
+      console.log('Products state set:', response.data?.length || 0, 'items');
+      if (!response.data || response.data.length === 0) {
+        Alert.alert('Info', 'No items found in the system');
+      }
+    } catch (error) {
+      console.error('Failed to fetch items:', error);
+      Alert.alert('Error', 'Failed to fetch items. Please try again.');
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const fetchTaxTemplates = async () => {
+    try {
+      setTaxTemplatesLoading(true);
+      const response = await ApiService.getSalesTaxesAndChargesTemplates();
+      setTaxTemplates(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch tax templates:', error);
+    } finally {
+      setTaxTemplatesLoading(false);
+    }
+  };
+
+
+
+
+
+  const fetchCouponCodes = async () => {
+    try {
+      const response = await ApiService.getCouponCodes();
+      setCouponCodes(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch coupon codes:', error);
+    }
+  };
+
+  const fetchSalesPartners = async () => {
+    try {
+      const response = await ApiService.getSalesPartners();
+      setSalesPartners(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch sales partners:', error);
+    }
+  };
+
+  const filteredTaxTemplates = taxTemplates.filter(template =>
+    template.title && template.title.toLowerCase().includes(taxTemplateSearch.toLowerCase())
+  );
+
+  const addItem = (product: Item) => {
     const newItem: QuotationItem = {
       id: Date.now().toString(),
-      name: product.name,
-      description: '',
+      name: product.name, // Use item code for quotation
+      description: stripHtml(product.description || ''),
       quantity: 1,
-      unitPrice: product.price,
-      discount: 0,
-      total: product.price
+      unitPrice: product.standard_rate || 0,
+      total: product.standard_rate || 0
     };
     setItems([...items, newItem]);
     setShowProductModal(false);
@@ -97,10 +304,8 @@ export default function QuotationFormScreen({ route, navigation }: any) {
     setItems(items.map(item => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
-        if (field === 'quantity' || field === 'unitPrice' || field === 'discount') {
-          const subtotal = updatedItem.quantity * updatedItem.unitPrice;
-          const discountAmount = (subtotal * updatedItem.discount) / 100;
-          updatedItem.total = subtotal - discountAmount;
+        if (field === 'quantity' || field === 'unitPrice') {
+          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
         }
         return updatedItem;
       }
@@ -113,34 +318,116 @@ export default function QuotationFormScreen({ route, navigation }: any) {
   };
 
   const subtotalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const totalDiscount = items.reduce((sum, item) => sum + ((item.quantity * item.unitPrice * item.discount) / 100), 0);
-  const totalAmount = subtotalAmount - totalDiscount;
+  const netAmount = subtotalAmount;
+  const vatAmount = (netAmount * parseFloat(vatRate)) / 100;
+  const totalTaxesAndCharges = vatAmount + additionalCharges;
+  const baseAmount = applyDiscountOn === 'Net Total' ? netAmount : (netAmount + totalTaxesAndCharges);
+  const additionalDiscountAmount = (baseAmount * additionalDiscountPercentage) / 100;
+  const finalDiscountAmount = discountAmount || additionalDiscountAmount;
+  const grandTotal = netAmount + totalTaxesAndCharges - finalDiscountAmount;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedCustomer || items.length === 0) {
       Alert.alert('Error', 'Please select a customer and add at least one item');
       return;
     }
 
-    const newQuotation = {
-      id: Date.now().toString(),
-      quotationNumber: `QT-2025-${String(Date.now()).slice(-3)}`,
-      customerName: selectedCustomer.company,
-      customerEmail: selectedCustomer.email,
-      quotationDate,
-      validUntil,
-      totalAmount,
-      currency: 'USD',
-      status: 'draft',
-      items: items.length,
-      notes,
-      termsAndConditions,
-      quotationItems: items
-    };
+    try {
+      setLoading(true);
+      const quotationData = {
+        party_name: selectedCustomer.name,
+        transaction_date: quotationDate,
+        valid_till: validUntil,
+        currency: 'BDT',
+        total: subtotalAmount,
+        net_total: netAmount,
+        total_taxes_and_charges: totalTaxesAndCharges,
+        grand_total: grandTotal,
+        taxes_and_charges_template: selectedTaxTemplate?.name,
 
-    Alert.alert('Success', 'Quotation created successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
+
+        coupon_code: selectedCouponCode?.name,
+        referral_sales_partner: selectedSalesPartner?.name,
+        apply_discount_on: applyDiscountOn,
+        additional_discount_percentage: additionalDiscountPercentage,
+        discount_amount: finalDiscountAmount,
+        items: items.map(item => ({
+          item_code: item.name,
+          qty: item.quantity,
+          rate: item.unitPrice,
+          description: item.description
+        })),
+        terms: termsAndConditions,
+        tc_name: notes
+      };
+
+      if (isEdit) {
+        await ApiService.updateDoc('Quotation', quotation.quotationNumber || quotation.name, quotationData);
+        Alert.alert('Success', 'Quotation updated successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        await ApiService.createDoc('Quotation', quotationData);
+        Alert.alert('Success', 'Quotation created successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create quotation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitQuotation = async () => {
+    try {
+      setLoading(true);
+      await ApiService.updateDoc('Quotation', quotation.quotationNumber || quotation.name, { docstatus: 1 });
+      Alert.alert('Success', 'Quotation submitted successfully!');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit quotation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSalesOrder = async () => {
+    try {
+      setLoading(true);
+      await ApiService.convertQuotationToSalesOrder(quotation.quotationNumber || quotation.name);
+      Alert.alert('Success', 'Sales Order created successfully!', [
+        {
+          text: 'View Sales Order',
+          onPress: () => navigation.navigate('Orders', { 
+            screen: 'SalesOrderForm', 
+            params: { quotation: quotation }
+          })
+        },
+        { text: 'OK' }
+      ]);
+    } catch (error: any) {
+      if (error.message.includes('docstatus=1')) {
+        Alert.alert('Submit Required', 'Please submit the quotation first before creating a sales order.', [
+          {
+            text: 'Submit & Create Order',
+            onPress: async () => {
+              try {
+                await ApiService.updateDoc('Quotation', quotation.quotationNumber || quotation.name, { docstatus: 1 });
+                await ApiService.convertQuotationToSalesOrder(quotation.quotationNumber || quotation.name);
+                Alert.alert('Success', 'Sales Order created successfully!');
+              } catch (submitError: any) {
+                Alert.alert('Error', submitError.message || 'Failed to create sales order');
+              }
+            }
+          },
+          { text: 'Cancel' }
+        ]);
+      } else {
+        Alert.alert('Error', error.message || 'Failed to create sales order');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -156,9 +443,9 @@ export default function QuotationFormScreen({ route, navigation }: any) {
           {selectedCustomer ? (
             <View style={styles.selectedCustomer}>
               <View style={styles.customerInfo}>
-                <Text style={styles.customerCompany}>{selectedCustomer.company}</Text>
+                <Text style={styles.customerCompany}>{selectedCustomer.customer_name}</Text>
                 <Text style={styles.customerName}>{selectedCustomer.name}</Text>
-                <Text style={styles.customerEmail}>{selectedCustomer.email}</Text>
+                <Text style={styles.customerEmail}>{selectedCustomer.email_id || 'No email'}</Text>
               </View>
               <TouchableOpacity onPress={() => setSelectedCustomer(null)}>
                 <Ionicons name="close" size={20} color={theme.colors.mutedForeground} />
@@ -167,7 +454,10 @@ export default function QuotationFormScreen({ route, navigation }: any) {
           ) : (
             <Button
               variant="outline"
-              onPress={() => setShowCustomerModal(true)}
+              onPress={() => {
+                setShowCustomerModal(true);
+                fetchCustomers();
+              }}
               style={styles.selectButton}
             >
               <Ionicons name="search" size={16} color={theme.colors.primary} />
@@ -231,7 +521,10 @@ export default function QuotationFormScreen({ route, navigation }: any) {
           <View style={styles.sectionHeader}>
             <Ionicons name="cube-outline" size={16} color={theme.colors.mutedForeground} />
             <Label>Items</Label>
-            <TouchableOpacity onPress={() => setShowProductModal(true)}>
+            <TouchableOpacity onPress={() => {
+              setShowProductModal(true);
+              fetchProducts();
+            }}>
               <Ionicons name="add" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
@@ -275,20 +568,10 @@ export default function QuotationFormScreen({ route, navigation }: any) {
                     </View>
                   </View>
                   
-                  <View style={styles.itemGrid}>
-                    <View style={styles.itemField}>
-                      <Label style={styles.fieldLabel}>Discount (%)</Label>
-                      <Input
-                        value={item.discount.toString()}
-                        onChangeText={(text) => updateItem(item.id, 'discount', parseFloat(text) || 0)}
-                        keyboardType="numeric"
-                      />
-                    </View>
-                    <View style={styles.itemField}>
-                      <Label style={styles.fieldLabel}>Total</Label>
-                      <View style={styles.totalField}>
-                        <Text style={styles.totalText}>${item.total.toFixed(2)}</Text>
-                      </View>
+                  <View style={styles.itemField}>
+                    <Label style={styles.fieldLabel}>Total</Label>
+                    <View style={styles.totalField}>
+                      <Text style={styles.totalText}>৳{item.total.toFixed(2)}</Text>
                     </View>
                   </View>
                 </Card>
@@ -298,20 +581,236 @@ export default function QuotationFormScreen({ route, navigation }: any) {
               <View style={styles.summaryContainer}>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Subtotal:</Text>
-                  <Text style={styles.summaryValue}>${subtotalAmount.toFixed(2)}</Text>
+                  <Text style={styles.summaryValue}>৳{subtotalAmount.toFixed(2)}</Text>
                 </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Total Discount:</Text>
-                  <Text style={[styles.summaryValue, styles.discountText]}>-${totalDiscount.toFixed(2)}</Text>
-                </View>
+
                 <Separator style={styles.separator} />
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total Amount:</Text>
-                  <Text style={styles.totalAmount}>${totalAmount.toFixed(2)}</Text>
+                  <Text style={styles.totalLabel}>Subtotal:</Text>
+                  <Text style={styles.totalAmount}>৳{netAmount.toFixed(2)}</Text>
                 </View>
               </View>
             </View>
           )}
+        </Card>
+
+        {/* Taxes and Charges */}
+        <Card style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="calculator-outline" size={16} color={theme.colors.mutedForeground} />
+            <Label>Taxes and Charges</Label>
+          </View>
+          
+
+          
+          {selectedTaxTemplate ? (
+            <View style={styles.selectedTemplate}>
+              <View style={styles.templateInfo}>
+                <Text style={styles.templateTitle}>{selectedTaxTemplate.title}</Text>
+                <Text style={styles.templateName}>{selectedTaxTemplate.name}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedTaxTemplate(null)}>
+                <Ionicons name="close" size={20} color={theme.colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Button
+              variant="outline"
+              onPress={() => {
+                setShowTaxTemplateModal(true);
+                fetchTaxTemplates();
+              }}
+              style={styles.selectButton}
+            >
+              <Ionicons name="calculator" size={16} color={theme.colors.primary} />
+              <Text style={styles.selectButtonText}>Select Tax Template</Text>
+            </Button>
+          )}
+          
+          <View style={styles.taxGrid}>
+            <View style={styles.taxField}>
+              <Label style={styles.fieldLabel}>VAT Rate (%)</Label>
+              <View style={styles.vatContainer}>
+                {['0', '5', '10', '15', '20'].map(rate => (
+                  <TouchableOpacity
+                    key={rate}
+                    style={[
+                      styles.vatOption,
+                      vatRate === rate && styles.vatOptionActive
+                    ]}
+                    onPress={() => setVatRate(rate)}
+                  >
+                    <Text style={[
+                      styles.vatText,
+                      vatRate === rate && styles.vatTextActive
+                    ]}>
+                      {rate}%
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.taxField}>
+              <Label style={styles.fieldLabel}>Additional Charges</Label>
+              <Input
+                value={additionalCharges.toString()}
+                onChangeText={(text) => setAdditionalCharges(parseFloat(text) || 0)}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            </View>
+          </View>
+          
+          <Separator style={styles.separator} />
+          <View style={styles.taxSummary}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Net Amount:</Text>
+              <Text style={styles.summaryValue}>৳{netAmount.toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>VAT ({vatRate}%):</Text>
+              <Text style={styles.summaryValue}>৳{vatAmount.toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Additional Charges:</Text>
+              <Text style={styles.summaryValue}>৳{additionalCharges.toFixed(2)}</Text>
+            </View>
+            <Separator style={styles.separator} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Total Taxes and Charges (BDT):</Text>
+              <Text style={styles.totalAmount}>৳{totalTaxesAndCharges.toFixed(2)}</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* Additional Discount */}
+        <Card style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="pricetag-outline" size={16} color={theme.colors.mutedForeground} />
+            <Label>Additional Discount</Label>
+          </View>
+          
+          <View style={styles.taxGrid}>
+            <View style={styles.taxField}>
+              <Label style={styles.fieldLabel}>Coupon Code</Label>
+              {selectedCouponCode ? (
+                <View style={styles.selectedItem}>
+                  <Text style={styles.selectedItemText}>{selectedCouponCode.name}</Text>
+                  <TouchableOpacity onPress={() => setSelectedCouponCode(null)}>
+                    <Ionicons name="close" size={16} color={theme.colors.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Button
+                  variant="outline"
+                  onPress={() => {
+                    setShowCouponCodeModal(true);
+                    fetchCouponCodes();
+                  }}
+                  style={styles.selectButton}
+                >
+                  <Text style={styles.selectButtonText}>Select Coupon Code</Text>
+                </Button>
+              )}
+            </View>
+            
+            <View style={styles.taxField}>
+              <Label style={styles.fieldLabel}>Referral Sales Partner</Label>
+              {selectedSalesPartner ? (
+                <View style={styles.selectedItem}>
+                  <Text style={styles.selectedItemText}>{selectedSalesPartner.name}</Text>
+                  <TouchableOpacity onPress={() => setSelectedSalesPartner(null)}>
+                    <Ionicons name="close" size={16} color={theme.colors.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Button
+                  variant="outline"
+                  onPress={() => {
+                    setShowSalesPartnerModal(true);
+                    fetchSalesPartners();
+                  }}
+                  style={styles.selectButton}
+                >
+                  <Text style={styles.selectButtonText}>Select Sales Partner</Text>
+                </Button>
+              )}
+            </View>
+          </View>
+          
+          <View style={styles.taxField}>
+            <Label style={styles.fieldLabel}>Apply Additional Discount On</Label>
+            <View style={styles.vatContainer}>
+              {['Grand Total', 'Net Total'].map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.vatOption,
+                    applyDiscountOn === option && styles.vatOptionActive
+                  ]}
+                  onPress={() => setApplyDiscountOn(option)}
+                >
+                  <Text style={[
+                    styles.vatText,
+                    applyDiscountOn === option && styles.vatTextActive
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          <View style={styles.taxGrid}>
+            <View style={styles.taxField}>
+              <Label style={styles.fieldLabel}>Additional Discount (%)</Label>
+              <Input
+                value={additionalDiscountPercentage.toString()}
+                onChangeText={(text) => setAdditionalDiscountPercentage(parseFloat(text) || 0)}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            </View>
+            
+            <View style={styles.taxField}>
+              <Label style={styles.fieldLabel}>Discount Amount</Label>
+              <Input
+                value={discountAmount.toString()}
+                onChangeText={(text) => setDiscountAmount(parseFloat(text) || 0)}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            </View>
+          </View>
+        </Card>
+
+        {/* Totals */}
+        <Card style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="calculator" size={16} color={theme.colors.mutedForeground} />
+            <Label>Totals</Label>
+          </View>
+          
+          <View style={styles.taxSummary}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Net Amount:</Text>
+              <Text style={styles.summaryValue}>৳{netAmount.toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Taxes and Charges:</Text>
+              <Text style={styles.summaryValue}>৳{totalTaxesAndCharges.toFixed(2)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Additional Discount:</Text>
+              <Text style={[styles.summaryValue, styles.discountText]}>-৳{finalDiscountAmount.toFixed(2)}</Text>
+            </View>
+            <Separator style={styles.separator} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Grand Total (BDT):</Text>
+              <Text style={styles.totalAmount}>৳{grandTotal.toFixed(2)}</Text>
+            </View>
+          </View>
         </Card>
 
         {/* Notes */}
@@ -345,9 +844,23 @@ export default function QuotationFormScreen({ route, navigation }: any) {
           <Button variant="outline" onPress={() => navigation.goBack()}>
             Cancel
           </Button>
-          <Button onPress={handleSave}>
-            Create Quotation
+          <Button onPress={handleSave} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size="small" color={theme.colors.primaryForeground} />
+            ) : (
+              isEdit ? 'Update Quotation' : 'Create Quotation'
+            )}
           </Button>
+          {isEdit && (
+            <>
+              <Button onPress={handleSubmitQuotation} disabled={loading} variant="outline">
+                Submit
+              </Button>
+              <Button onPress={handleCreateSalesOrder} disabled={loading} style={styles.createOrderButton}>
+                Create Sales Order
+              </Button>
+            </>
+          )}
         </View>
       </View>
 
@@ -369,22 +882,26 @@ export default function QuotationFormScreen({ route, navigation }: any) {
               style={styles.searchInput}
             />
             
-            <ScrollView style={styles.customerList}>
-              {filteredCustomers.map(customer => (
-                <TouchableOpacity
-                  key={customer.id}
-                  style={styles.customerItem}
-                  onPress={() => {
-                    setSelectedCustomer(customer);
-                    setShowCustomerModal(false);
-                    setCustomerSearch('');
-                  }}
-                >
-                  <Text style={styles.customerCompany}>{customer.company}</Text>
-                  <Text style={styles.customerName}>{customer.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            {customersLoading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} style={{ margin: 20 }} />
+            ) : (
+              <ScrollView style={styles.customerList}>
+                {filteredCustomers.map(customer => (
+                  <TouchableOpacity
+                    key={customer.name}
+                    style={styles.customerItem}
+                    onPress={() => {
+                      setSelectedCustomer(customer);
+                      setShowCustomerModal(false);
+                      setCustomerSearch('');
+                    }}
+                  >
+                    <Text style={styles.customerCompany}>{customer.customer_name}</Text>
+                    <Text style={styles.customerName}>{customer.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -407,20 +924,144 @@ export default function QuotationFormScreen({ route, navigation }: any) {
               style={styles.searchInput}
             />
             
-            <ScrollView style={styles.productList}>
-              {filteredProducts.map(product => (
-                <TouchableOpacity
-                  key={product.id}
-                  style={styles.productItem}
-                  onPress={() => addItem(product)}
-                >
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{product.name}</Text>
-                    <Text style={styles.productPrice}>${product.price}</Text>
-                  </View>
-                  <Ionicons name="add" size={20} color={theme.colors.primary} />
-                </TouchableOpacity>
-              ))}
+            {productsLoading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} style={{ margin: 20 }} />
+            ) : (
+              <ScrollView style={styles.productList}>
+                {filteredProducts.length === 0 ? (
+                  <Text style={styles.emptyText}>No products found</Text>
+                ) : (
+                  filteredProducts.map(product => (
+                    <TouchableOpacity
+                      key={product.name}
+                      style={styles.productItem}
+                      onPress={() => addItem(product)}
+                    >
+                      <View style={styles.productInfo}>
+                        <Text style={styles.productName}>{product.item_name}</Text>
+                        <Text style={styles.productPrice}>৳{product.standard_rate || 0}</Text>
+                      </View>
+                      <Ionicons name="add" size={20} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Tax Template Modal */}
+      <Modal visible={showTaxTemplateModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Tax Template</Text>
+              <TouchableOpacity onPress={() => setShowTaxTemplateModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.foreground} />
+              </TouchableOpacity>
+            </View>
+            
+            <Input
+              placeholder="Search tax templates..."
+              value={taxTemplateSearch}
+              onChangeText={setTaxTemplateSearch}
+              style={styles.searchInput}
+            />
+            
+            {taxTemplatesLoading ? (
+              <ActivityIndicator size="large" color={theme.colors.primary} style={{ margin: 20 }} />
+            ) : (
+              <ScrollView style={styles.templateList}>
+                {filteredTaxTemplates.length === 0 ? (
+                  <Text style={styles.emptyText}>No tax templates found</Text>
+                ) : (
+                  filteredTaxTemplates.map(template => (
+                    <TouchableOpacity
+                      key={template.name}
+                      style={styles.templateItem}
+                      onPress={() => {
+                        setSelectedTaxTemplate(template);
+                        setShowTaxTemplateModal(false);
+                        setTaxTemplateSearch('');
+                      }}
+                    >
+                      <Text style={styles.templateTitle}>{template.title}</Text>
+                      <Text style={styles.templateName}>{template.name}</Text>
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+
+
+
+
+      {/* Coupon Code Modal */}
+      <Modal visible={showCouponCodeModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Coupon Code</Text>
+              <TouchableOpacity onPress={() => setShowCouponCodeModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.foreground} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.templateList}>
+              {couponCodes.length === 0 ? (
+                <Text style={styles.emptyText}>No coupon codes found</Text>
+              ) : (
+                couponCodes.map(coupon => (
+                  <TouchableOpacity
+                    key={coupon.name}
+                    style={styles.templateItem}
+                    onPress={() => {
+                      setSelectedCouponCode(coupon);
+                      setShowCouponCodeModal(false);
+                    }}
+                  >
+                    <Text style={styles.templateTitle}>{coupon.name}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sales Partner Modal */}
+      <Modal visible={showSalesPartnerModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Sales Partner</Text>
+              <TouchableOpacity onPress={() => setShowSalesPartnerModal(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.foreground} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.templateList}>
+              {salesPartners.length === 0 ? (
+                <Text style={styles.emptyText}>No sales partners found</Text>
+              ) : (
+                salesPartners.map(partner => (
+                  <TouchableOpacity
+                    key={partner.name}
+                    style={styles.templateItem}
+                    onPress={() => {
+                      setSelectedSalesPartner(partner);
+                      setShowSalesPartnerModal(false);
+                    }}
+                  >
+                    <Text style={styles.templateTitle}>{partner.name}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -609,6 +1250,11 @@ const styles = StyleSheet.create({
   actionGrid: {
     flexDirection: 'row',
     gap: theme.spacing.md,
+    flexWrap: 'wrap',
+  },
+  createOrderButton: {
+    backgroundColor: theme.colors.primary,
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -667,5 +1313,81 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.mutedForeground,
+  },
+  taxGrid: {
+    gap: theme.spacing.md,
+  },
+  taxField: {
+    marginBottom: theme.spacing.sm,
+  },
+  vatContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  vatOption: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  vatOptionActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  vatText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.foreground,
+  },
+  vatTextActive: {
+    color: theme.colors.primaryForeground,
+  },
+  taxSummary: {
+    gap: theme.spacing.sm,
+  },
+  selectedTemplate: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.borderRadius.lg,
+    marginBottom: theme.spacing.md,
+  },
+  templateInfo: {
+    flex: 1,
+  },
+  templateTitle: {
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.medium as '500',
+    color: theme.colors.foreground,
+  },
+  templateName: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.mutedForeground,
+  },
+  templateList: {
+    maxHeight: 300,
+  },
+  templateItem: {
+    padding: theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  selectedItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  selectedItemText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.foreground,
+    flex: 1,
   },
 });

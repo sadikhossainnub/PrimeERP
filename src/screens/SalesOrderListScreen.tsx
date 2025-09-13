@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import apiService from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -131,6 +131,37 @@ export default function SalesOrderListScreen({ navigation }: any) {
     return `৳${amount.toLocaleString('en-BD')}`;
   };
 
+  const handleCreateDeliveryNote = async (order: SalesOrder) => {
+    Alert.alert(
+      'Create Delivery Note',
+      `Create delivery note for order ${order.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Create',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const result = await apiService.convertSalesOrderToDeliveryNote(order.name);
+              Alert.alert('Success', 'Delivery Note created successfully!', [
+                {
+                  text: 'View Delivery Note',
+                  onPress: () => navigation.navigate('DeliveryNoteForm', { salesOrder: order })
+                },
+                { text: 'OK' }
+              ]);
+              loadOrders();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to create delivery note');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderOrder = ({ item }: { item: SalesOrder }) => (
     <TouchableOpacity
       style={styles.orderCard}
@@ -175,7 +206,17 @@ export default function SalesOrderListScreen({ navigation }: any) {
         )}
       </View>
       
-      <Ionicons name="chevron-forward" size={20} color="#666" style={styles.chevron} />
+      <View style={styles.actionButtons}>
+        {(item.status === 'To Deliver and Bill' || item.status === 'To Bill') && (
+          <TouchableOpacity
+            style={styles.deliveryButton}
+            onPress={() => handleCreateDeliveryNote(item)}
+          >
+            <Ionicons name="car-outline" size={16} color="#2196F3" />
+          </TouchableOpacity>
+        )}
+        <Ionicons name="chevron-forward" size={20} color="#666" />
+      </View>
     </TouchableOpacity>
   );
 
@@ -186,14 +227,22 @@ export default function SalesOrderListScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       {/* Search */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search orders, customers..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search orders, customers..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <TouchableOpacity 
+          style={styles.addButton} 
+          onPress={() => navigation.navigate('SalesOrderForm')}
+        >
+          <Ionicons name="add" size={24} color="white" />
+        </TouchableOpacity>
       </View>
 
       {/* Status Filter */}
@@ -239,13 +288,7 @@ export default function SalesOrderListScreen({ navigation }: any) {
         }
       />
 
-      {/* Floating Action Button */}
-      <TouchableOpacity 
-        style={styles.fab} 
-        onPress={() => navigation.navigate('SalesOrderForm')}
-      >
-        <Ionicons name="add" size={24} color="white" />
-      </TouchableOpacity>
+
     </View>
   );
 }
@@ -256,14 +299,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
 
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    margin: 16,
+    marginBottom: 12,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
     paddingHorizontal: 12,
-    margin: 16,
-    marginBottom: 12,
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2196F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   searchIcon: {
     marginRight: 8,
@@ -383,11 +445,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  chevron: {
+  actionButtons: {
     position: 'absolute',
     right: 16,
     top: '50%',
-    marginTop: -10,
+    marginTop: -16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deliveryButton: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: '#e3f2fd',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -402,20 +472,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
+
 });

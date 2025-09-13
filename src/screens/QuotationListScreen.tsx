@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ApiService from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import WorkflowIndicator from '../components/WorkflowIndicator';
+import { showQuotationExpiredAlert } from '../utils/alerts';
 
 interface Quotation {
   id: string;
@@ -102,9 +104,9 @@ export default function QuotationListScreen({ navigation }: any) {
   const filteredQuotations = useMemo(() => {
     return quotations.filter(quotation => {
       const matchesSearch = 
-        quotation.quotationNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        quotation.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        quotation.email.toLowerCase().includes(searchQuery.toLowerCase());
+        (quotation.quotationNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (quotation.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (quotation.email || '').toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = selectedStatus === 'all' || quotation.status === selectedStatus;
       
@@ -198,11 +200,54 @@ export default function QuotationListScreen({ navigation }: any) {
     return diffDays <= 7 && diffDays > 0;
   };
 
+  const handleConvertToSalesOrder = async (quotation: Quotation) => {
+    Alert.alert(
+      'Convert to Sales Order',
+      `Convert quotation ${quotation.quotationNumber} to Sales Order?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Convert',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const fullQuotation = await ApiService.getDocument('Quotation', quotation.quotationNumber);
+              Alert.alert('Success', 'Ready to create Sales Order!', [
+                {
+                  text: 'Create Sales Order',
+                  onPress: () => navigation.navigate('SalesOrderForm', { quotation: fullQuotation.data })
+                },
+                { text: 'OK' }
+              ]);
+              loadQuotations();
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to fetch quotation details');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const isQuotationExpired = (validUntil: string) => {
+    const today = new Date();
+    const expiryDate = new Date(validUntil);
+    return expiryDate < today;
+  };
+
+  const handleQuotationPress = (item: Quotation) => {
+    if (isQuotationExpired(item.valid_till)) {
+      showQuotationExpiredAlert(item.quotationNumber);
+      return;
+    }
+    navigation.navigate('QuotationForm', { quotation: item });
+  };
+
   const renderQuotation = ({ item }: { item: Quotation }) => (
-    <TouchableOpacity
-      style={styles.quotationCard}
-      onPress={() => navigation.navigate('QuotationForm', { quotation: item })}
-    >
+    <TouchableOpacity onPress={() => handleQuotationPress(item)}>
+      <View style={styles.quotationCard}>
       <View style={styles.quotationHeader}>
         <Text style={styles.quotationNumber}>{item.quotationNumber}</Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
@@ -250,7 +295,39 @@ export default function QuotationListScreen({ navigation }: any) {
         </View>
       </View>
       
-      <Ionicons name="chevron-forward" size={20} color="#666" style={styles.chevron} />
+      {item.status === 'approved' && (
+        <View style={styles.workflowContainer}>
+          <WorkflowIndicator 
+            currentStep="quotation" 
+            completedSteps={item.sales_order ? ['quotation'] : []} 
+            showLabels={false}
+          />
+        </View>
+      )}
+      
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={styles.previewButton}
+          onPress={() => navigation.navigate('DocumentPreview', { document: item, docType: 'quotation' })}
+        >
+          <Ionicons name="eye-outline" size={16} color="#666" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => navigation.navigate('QuotationForm', { quotation: item })}
+        >
+          <Ionicons name="create-outline" size={16} color="#666" />
+        </TouchableOpacity>
+        {item.status === 'approved' && (
+          <TouchableOpacity
+            style={styles.convertButton}
+            onPress={() => handleConvertToSalesOrder(item)}
+          >
+            <Ionicons name="arrow-forward-outline" size={16} color="#4CAF50" />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
     </TouchableOpacity>
   );
 
@@ -261,14 +338,22 @@ export default function QuotationListScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       {/* Search */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search quotations, customers..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search quotations, customers..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate('QuotationForm')}
+        >
+          <Ionicons name="add" size={24} color="white" />
+        </TouchableOpacity>
       </View>
 
       {/* Status Filter */}
@@ -314,12 +399,7 @@ export default function QuotationListScreen({ navigation }: any) {
         }
       />
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('QuotationForm')}
-      >
-        <Ionicons name="add" size={24} color="white" />
-      </TouchableOpacity>
+
     </View>
   );
 }
@@ -329,14 +409,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    margin: 16,
+    marginBottom: 12,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
     paddingHorizontal: 12,
-    margin: 16,
-    marginBottom: 12,
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   searchIcon: {
     marginRight: 8,
@@ -362,8 +461,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   filterButtonActive: {
-    backgroundColor: '#2196F3',
-    borderColor: '#2196F3',
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   filterButtonText: {
     fontSize: 12,
@@ -475,11 +574,34 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 6,
   },
-  chevron: {
+  actionButtons: {
     position: 'absolute',
     right: 16,
     top: '50%',
-    marginTop: -10,
+    marginTop: -16,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  previewButton: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+  },
+  convertButton: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: '#e8f5e8',
+  },
+  workflowContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -494,20 +616,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
   },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 80,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
+
 });

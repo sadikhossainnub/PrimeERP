@@ -37,6 +37,8 @@ export interface Quotation {
   total?: number;
   grand_total?: number;
   status?: string;
+  sales_order?: string;
+  workflow_state?: string;
 }
 
 export interface QuotationItem {
@@ -55,6 +57,9 @@ export interface SalesOrder {
   total?: number;
   grand_total?: number;
   status?: string;
+  quotation?: string;
+  delivery_note?: string;
+  workflow_state?: string;
 }
 
 export interface SalesOrderItem {
@@ -70,6 +75,8 @@ export interface DeliveryNote {
   posting_date: string;
   items: DeliveryNoteItem[];
   status?: string;
+  sales_order?: string;
+  workflow_state?: string;
 }
 
 export interface DeliveryNoteItem {
@@ -122,6 +129,8 @@ export interface DashboardData {
   quotationCount: number;
   draftQuotations: number;
   approvedQuotations: number;
+  expiringQuotations: number;
+  pendingOrders: number;
   recentActivities: {
     title: string;
     subtitle: string;

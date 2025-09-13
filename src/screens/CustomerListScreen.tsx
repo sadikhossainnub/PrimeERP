@@ -124,7 +124,7 @@ export default function CustomerListScreen({ navigation }: any) {
     const matchesStatus = selectedStatus === 'all' || customer.status === selectedStatus;
     
     return matchesSearch && matchesStatus;
-  });
+  }).reverse();
 
   const loadCustomers = async () => {
     try {
@@ -267,14 +267,22 @@ export default function CustomerListScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       {/* Search */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search customers..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search customers..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate('CustomerForm')}
+        >
+          <Ionicons name="add" size={24} color="white" />
+        </TouchableOpacity>
       </View>
 
       {/* Status Filter */}
@@ -320,12 +328,7 @@ export default function CustomerListScreen({ navigation }: any) {
         }
       />
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CustomerForm')}
-      >
-        <Ionicons name="add" size={24} color="white" />
-      </TouchableOpacity>
+
     </View>
   );
 }
@@ -335,14 +338,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    margin: 16,
+    marginBottom: 12,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
     paddingHorizontal: 12,
-    margin: 16,
-    marginBottom: 12,
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2196F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   searchIcon: {
     marginRight: 8,
@@ -513,20 +535,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
   },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 80,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
+
 });

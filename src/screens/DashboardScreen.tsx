@@ -15,6 +15,7 @@ export default function DashboardScreen({ navigation }: any) {
   const [userName, setUserName] = useState('');
 
   const loadDashboardData = async () => {
+    setLoading(true);
     try {
       setConnectionStatus('connecting');
       setError('');
@@ -30,7 +31,7 @@ export default function DashboardScreen({ navigation }: any) {
     } catch (error: any) {
       console.error('Failed to load dashboard data:', error.message);
       setConnectionStatus('error');
-      setError('Failed to load dashboard data');
+      setError(error.message || 'An unexpected error occurred.');
       setData(null);
     } finally {
       setLoading(false);
@@ -69,8 +70,21 @@ export default function DashboardScreen({ navigation }: any) {
     }
   };
 
-  if (loading && !data) {
+  if (loading && !data && !error) {
     return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="cloud-offline-outline" size={64} color={theme.colors.mutedForeground} />
+        <Text style={styles.errorTitle}>Connection Error</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   return (
@@ -221,18 +235,31 @@ export default function DashboardScreen({ navigation }: any) {
       {/* Recent Activity */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Recent Activity</Text>
-        {data?.recentActivities?.map((activity, index) => (
-          <View key={index} style={styles.activityItem}>
-            <View style={[styles.activityIcon, { backgroundColor: `${activity.color}20` }]}>
-              <Ionicons name={activity.icon as any} size={16} color={activity.color} />
+        {data?.recentActivities && data.recentActivities.length > 0 ? (
+          data.recentActivities.map((activity, index) => (
+            <View key={index} style={styles.activityItem}>
+              <View style={[styles.activityIcon, { backgroundColor: `${activity.color}20` }]}>
+                <Ionicons name={activity.icon as any} size={16} color={activity.color} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityTitle}>{activity.title}</Text>
+                <Text style={styles.activitySubtitle}>{activity.subtitle}</Text>
+              </View>
+              <Text style={styles.activityTime}>{activity.time}</Text>
+            </View>
+          ))
+        ) : (
+          <View style={styles.activityItem}>
+            <View style={[styles.activityIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Ionicons name="information-circle" size={16} color="#2196F3" />
             </View>
             <View style={styles.activityContent}>
-              <Text style={styles.activityTitle}>{activity.title}</Text>
-              <Text style={styles.activitySubtitle}>{activity.subtitle}</Text>
+              <Text style={styles.activityTitle}>No recent activity</Text>
+              <Text style={styles.activitySubtitle}>Start creating orders and quotations</Text>
             </View>
-            <Text style={styles.activityTime}>{activity.time}</Text>
+            <Text style={styles.activityTime}>Now</Text>
           </View>
-        ))}
+        )}
       </View>
 
       {/* Alerts */}
@@ -241,30 +268,70 @@ export default function DashboardScreen({ navigation }: any) {
           <Ionicons name="alert-circle" size={16} color="#FF9800" />
           <Text style={styles.alertTitle}>Attention Needed</Text>
         </View>
-        <View style={styles.alertItem}>
-          <Text style={styles.alertText}>3 quotations expiring soon</Text>
-          <TouchableOpacity 
-            style={styles.alertButton} 
-            onPress={() => navigation.navigate('QuotationList')}
-          >
-            <Text style={styles.alertButtonText}>Review</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.alertItem}>
-          <Text style={styles.alertText}>5 orders awaiting confirmation</Text>
-          <TouchableOpacity 
-            style={styles.alertButton} 
-            onPress={() => navigation.navigate('SalesOrderList')}
-          >
-            <Text style={styles.alertButtonText}>Review</Text>
-          </TouchableOpacity>
-        </View>
+        {data?.expiringQuotations && data.expiringQuotations > 0 && (
+          <View style={styles.alertItem}>
+            <Text style={styles.alertText}>{data.expiringQuotations} quotations expiring soon</Text>
+            <TouchableOpacity 
+              style={styles.alertButton} 
+              onPress={() => navigation.navigate('Quotes', { screen: 'QuotationList' })}
+            >
+              <Text style={styles.alertButtonText}>Review</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {data?.pendingOrders && data.pendingOrders > 0 && (
+          <View style={styles.alertItem}>
+            <Text style={styles.alertText}>{data.pendingOrders} orders awaiting confirmation</Text>
+            <TouchableOpacity 
+              style={styles.alertButton} 
+              onPress={() => navigation.navigate('Orders', { screen: 'SalesOrderList' })}
+            >
+              <Text style={styles.alertButtonText}>Review</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {(!data?.expiringQuotations || data.expiringQuotations === 0) && (!data?.pendingOrders || data.pendingOrders === 0) && (
+          <View style={styles.alertItem}>
+            <Text style={styles.alertText}>All caught up! No urgent items need attention.</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
+  errorTitle: {
+    fontSize: theme.typography.fontSize['xl'],
+    fontWeight: theme.typography.fontWeight.bold as '700',
+    color: theme.colors.foreground,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  errorMessage: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.mutedForeground,
+    textAlign: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  retryButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+  },
+  retryButtonText: {
+    color: theme.colors.primaryForeground,
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.semibold as '600',
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,16 @@ import {
   Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ApiService from '../services/api';
+import ForgotPasswordScreen from './ForgotPasswordScreen';
 
 interface LoginProps {
   onLogin: (user: any) => void;
 }
 
 export default function LoginScreen({ onLogin }: LoginProps) {
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -28,6 +31,42 @@ export default function LoginScreen({ onLogin }: LoginProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+
+  const loadSavedCredentials = async () => {
+    try {
+      const savedCredentials = await AsyncStorage.getItem('savedCredentials');
+      if (savedCredentials) {
+        const { email, password } = JSON.parse(savedCredentials);
+        setFormData(prev => ({
+          ...prev,
+          email,
+          password,
+          rememberMe: true
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load saved credentials:', error);
+    }
+  };
+
+  const saveCredentials = async () => {
+    try {
+      if (formData.rememberMe) {
+        await AsyncStorage.setItem('savedCredentials', JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }));
+      } else {
+        await AsyncStorage.removeItem('savedCredentials');
+      }
+    } catch (error) {
+      console.error('Failed to save credentials:', error);
+    }
+  };
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -70,6 +109,7 @@ export default function LoginScreen({ onLogin }: LoginProps) {
       console.log('Attempting login with:', formData.email, formData.password);
       const result = await ApiService.login(formData.email, formData.password);
       console.log('Login successful:', result);
+      await saveCredentials();
       onLogin(result.user);
     } catch (error) {
       console.error('Login failed:', error);
@@ -79,6 +119,10 @@ export default function LoginScreen({ onLogin }: LoginProps) {
     }
   };
 
+
+  if (showForgotPassword) {
+    return <ForgotPasswordScreen onBack={() => setShowForgotPassword(false)} />;
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -165,7 +209,10 @@ export default function LoginScreen({ onLogin }: LoginProps) {
               </View>
               <Text style={styles.rememberText}>Remember me</Text>
             </TouchableOpacity>
-            <TouchableOpacity disabled={isLoading}>
+            <TouchableOpacity 
+              onPress={() => setShowForgotPassword(true)}
+              disabled={isLoading}
+            >
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
           </View>
